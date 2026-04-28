@@ -47,38 +47,40 @@ static __always_inline int is_allowed(u32 pid)
     return val != NULL;
 }
 
-// LSM hook: mmap_file - OPTIMIZED HOT PATH
+// LSM hook: mmap_file - BLOCKS W^X ALLOCATIONS
 SEC("lsm/mmap_file")
 int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
              unsigned long prot, unsigned long flags)
 {
-    // Fast path: Check W^X first (most common case)
-    if (!is_wx_violation(prot))
-        return 0; // Allow - no event needed
+    // Check W^X violation
+    if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        u32 pid = bpf_get_current_pid_tgid() >> 32;
+        
+        // Debug logging - visible in /sys/kernel/debug/tracing/trace_pipe
+        bpf_printk("NEXUS: W^X detected! PID=%d prot=0x%lx", pid, prot);
+        
+        // Check allowlist
+        if (is_allowed(pid)) {
+            bpf_printk("NEXUS: PID %d is allowed", pid);
+            return 0;
+        }
+        
+        // Log to ring buffer
+        struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = pid;
+            e->blocked = 1;
+            e->timestamp = bpf_ktime_get_ns();
+            bpf_ringbuf_submit(e, 0);
+        }
+        
+        // BLOCK THE ALLOCATION
+        bpf_printk("NEXUS: BLOCKING W^X for PID %d", pid);
+        return -EPERM;
+    }
     
-    // Get PID
-    u32 pid = bpf_get_current_pid_tgid() >> 32;
-    
-    // Fast path: Allowlist check
-    if (is_allowed(pid))
-        return 0; // Allow - trusted process
-    
-    // BLOCK: This is a W^X violation
-    // Reserve ring buffer space
-    struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
-    if (!e)
-        return -EPERM; // Block even if we can't log
-    
-    // Fill event - minimal data
-    e->pid = pid;
-    e->blocked = 1;
-    e->timestamp = bpf_ktime_get_ns();
-    
-    // Submit event
-    bpf_ringbuf_submit(e, 0);
-    
-    // BLOCK THE ALLOCATION
-    return -EPERM;
+    // Allow normal allocations
+    return 0;
 }
 
 char LICENSE[] SEC("license") = "GPL";
