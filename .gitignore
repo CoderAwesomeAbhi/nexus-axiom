@@ -1,0 +1,37 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# eBPF
+*.o
+*.ll
+
+# Build artifacts
+/target/
+/build/
+
+# Test binaries
+test_exploit
+test_cve_*
+test_pwnkit
+bench_mmap
+bench_baseline
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary
+/tmp/
+*.tmp
