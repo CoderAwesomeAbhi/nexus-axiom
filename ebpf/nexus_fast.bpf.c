@@ -33,13 +33,6 @@ struct {
     __type(value, u32);
 } allowlist SEC(".maps");
 
-// Fast path: W^X detection
-static __always_inline int is_wx_violation(unsigned long prot)
-{
-    // Single bitwise check - fastest possible
-    return (prot & PROT_WRITE) && (prot & PROT_EXEC);
-}
-
 // Fast path: Allowlist check
 static __always_inline int is_allowed(u32 pid)
 {
