@@ -5,6 +5,9 @@ mod blockchain;
 mod cloud;
 mod real_ebpf;
 
+#[cfg(target_os = "linux")]
+mod seccomp_engine;
+
 use clap::{Parser, Subcommand};
 use real_ebpf::RealEBPFEngine;
 
@@ -53,30 +56,52 @@ fn main() {
 fn start_real_protection(audit_only: bool) {
     println!("🟢 Starting REAL eBPF Protection...\n");
     
-    let mut engine = RealEBPFEngine::new();
+    let mut ebpf_engine = RealEBPFEngine::new();
     
-    match engine.load_and_attach() {
-        Ok(_) => {
-            println!("\n✅ Nexus Axiom is now protecting your system");
-            println!("   Mode: {}", if audit_only { "AUDIT ONLY" } else { "ENFORCE" });
-            println!("\n📊 Active Protections:");
-            println!("   • W^X memory blocking (LSM mmap_file)");
-            println!("   • Process execution monitoring (LSM bprm_check)");
-            println!("   • Ring buffer event streaming");
-            println!("\n⚠️  Press Ctrl+C to stop (or run: nexus-axiom unload)");
-            
-            if let Err(e) = engine.process_events() {
-                eprintln!("Error processing events: {}", e);
-            }
-        }
+    // Load eBPF LSM hooks
+    match ebpf_engine.load_and_attach() {
+        Ok(_) => println!(" ✅ eBPF LSM hooks loaded"),
         Err(e) => {
-            eprintln!("❌ Failed to start: {}", e);
-            eprintln!("\nTroubleshooting:");
-            eprintln!("  • Are you running as root? (sudo ./nexus-axiom start)");
-            eprintln!("  • Is your kernel compiled with LSM BPF support?");
-            eprintln!("  • Check: cat /sys/kernel/security/lsm | grep bpf");
+            eprintln!("❌ Failed to load eBPF LSM: {}", e);
             std::process::exit(1);
         }
+    }
+
+    // Build and apply seccomp filter
+    #[cfg(target_os = "linux")]
+    {
+        use crate::seccomp_engine::SeccompEngine;
+        let mut seccomp_engine = SeccompEngine::new();
+        
+        match seccomp_engine.build_filter() {
+            Ok(_) => {},
+            Err(e) => {
+                eprintln!("❌ Failed to build seccomp filter: {}", e);
+                std::process::exit(1);
+            }
+        }
+        
+        match seccomp_engine.apply() {
+            Ok(_) => {},
+            Err(e) => {
+                eprintln!("❌ Failed to apply seccomp filter: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    println!("\n✅ Nexus Axiom is now protecting your system");
+    println!("   Mode: {}", if audit_only { "AUDIT ONLY" } else { "ENFORCE" });
+    println!("\n📊 Active Protections:");
+    println!("   • W^X memory blocking (eBPF LSM + Seccomp)");
+    println!("   • File-backed mmap (LSM mmap_file)");
+    println!("   • Anonymous mmap (Seccomp)");
+    println!("   • Memory protection changes (LSM file_mprotect)");
+    println!("   • Ring buffer event streaming");
+    println!("\n⚠️  Press Ctrl+C to stop (or run: nexus-axiom unload)");
+    
+    if let Err(e) = ebpf_engine.process_events() {
+        eprintln!("Error processing events: {}", e);
     }
 }
 

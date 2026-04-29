@@ -25,6 +25,7 @@ chrono = "0.4"
 nix = { version = "0.27", features = ["user"] }
 libbpf-rs = "0.23"
 libbpf-sys = "1.4"
+seccompiler = "0.4"
 
 [profile.release]
 opt-level = 3
