@@ -32,5 +32,6 @@ typedef __u32 __wsum;
 
 struct file;
 struct linux_binprm;
+struct vm_area_struct;
 
 #endif /* __VMLINUX_H__ */
