@@ -29,9 +29,17 @@ typedef __u32 __wsum;
 #define BPF_MAP_TYPE_RINGBUF 27
 
 #define EPERM 1
+#define EACCES 13
 
 struct file;
 struct linux_binprm;
 struct vm_area_struct;
+
+// Tracepoint context for syscall entry
+struct trace_event_raw_sys_enter {
+    u64 __unused__;
+    long id;
+    unsigned long args[6];
+};
 
 #endif /* __VMLINUX_H__ */
