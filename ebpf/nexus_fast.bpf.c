@@ -106,4 +106,42 @@ int BPF_PROG(file_mprotect, struct vm_area_struct *vma, unsigned long reqprot,
     return 0;
 }
 
+// Tracepoint: sys_enter_mmap - KILLS processes attempting W^X anonymous mmap
+SEC("tracepoint/syscalls/sys_enter_mmap")
+int trace_mmap_enter(struct trace_event_raw_sys_enter *ctx)
+{
+    // Extract mmap arguments
+    // mmap(addr, len, prot, flags, fd, offset)
+    // args[2] is prot
+    unsigned long prot = ctx->args[2];
+    
+    // Check for W^X violation
+    if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        u32 pid = bpf_get_current_pid_tgid() >> 32;
+        
+        bpf_printk("NEXUS: W^X in mmap syscall! PID=%d prot=0x%lx", pid, prot);
+        
+        // Check allowlist
+        if (is_allowed(pid)) {
+            bpf_printk("NEXUS: PID %d is allowed", pid);
+            return 0;
+        }
+        
+        // Log to ring buffer
+        struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = pid;
+            e->blocked = 1;
+            e->timestamp = bpf_ktime_get_ns();
+            bpf_ringbuf_submit(e, 0);
+        }
+        
+        // TERMINATE THE PROCESS
+        bpf_printk("NEXUS: KILLING process %d for W^X attempt", pid);
+        bpf_send_signal(9); // SIGKILL
+    }
+    
+    return 0;
+}
+
 char LICENSE[] SEC("license") = "GPL";
