@@ -30,6 +30,7 @@ typedef __u32 __wsum;
 
 #define EPERM 1
 #define EACCES 13
+#define SIGKILL 9
 
 struct file;
 struct linux_binprm;
