@@ -138,7 +138,7 @@ int trace_mmap_enter(struct trace_event_raw_sys_enter *ctx)
         
         // TERMINATE THE PROCESS
         bpf_printk("NEXUS: KILLING process %d for W^X attempt", pid);
-        bpf_send_signal(9); // SIGKILL
+        bpf_send_signal(SIGKILL);
     }
     
     return 0;
