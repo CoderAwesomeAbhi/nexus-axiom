@@ -40,25 +40,21 @@ static __always_inline int is_allowed(u32 pid)
     return val != NULL;
 }
 
-// LSM hook: file_mmap - BLOCKS W^X ALLOCATIONS (including anonymous)
-SEC("lsm/file_mmap")
-int BPF_PROG(file_mmap, struct file *file, unsigned long reqprot,
+// LSM hook: mmap_file - BLOCKS W^X ALLOCATIONS (file-backed)
+SEC("lsm/mmap_file")
+int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
              unsigned long prot, unsigned long flags)
 {
-    // Check W^X violation (works for both file-backed and anonymous mmap)
+    // Check W^X violation
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
         u32 pid = bpf_get_current_pid_tgid() >> 32;
         
-        // Debug logging
-        bpf_printk("NEXUS: W^X detected in mmap! PID=%d prot=0x%lx flags=0x%lx", pid, prot, flags);
+        bpf_printk("NEXUS: W^X in mmap_file! PID=%d prot=0x%lx", pid, prot);
         
-        // Check allowlist
         if (is_allowed(pid)) {
-            bpf_printk("NEXUS: PID %d is allowed", pid);
             return 0;
         }
         
-        // Log to ring buffer
         struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
         if (e) {
             e->pid = pid;
@@ -67,8 +63,37 @@ int BPF_PROG(file_mmap, struct file *file, unsigned long reqprot,
             bpf_ringbuf_submit(e, 0);
         }
         
-        // BLOCK THE ALLOCATION
-        bpf_printk("NEXUS: BLOCKING W^X mmap for PID %d", pid);
+        bpf_printk("NEXUS: BLOCKING W^X mmap_file PID %d", pid);
+        return -EPERM;
+    }
+    
+    return 0;
+}
+
+// LSM hook: mmap_addr - BLOCKS W^X ALLOCATIONS (anonymous)
+SEC("lsm/mmap_addr")
+int BPF_PROG(mmap_addr, unsigned long addr, unsigned long len, unsigned long prot,
+             unsigned long flags, unsigned long fd, unsigned long pgoff)
+{
+    // Check W^X violation in anonymous mmap
+    if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        u32 pid = bpf_get_current_pid_tgid() >> 32;
+        
+        bpf_printk("NEXUS: W^X in mmap_addr! PID=%d prot=0x%lx", pid, prot);
+        
+        if (is_allowed(pid)) {
+            return 0;
+        }
+        
+        struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = pid;
+            e->blocked = 1;
+            e->timestamp = bpf_ktime_get_ns();
+            bpf_ringbuf_submit(e, 0);
+        }
+        
+        bpf_printk("NEXUS: BLOCKING W^X mmap_addr PID %d", pid);
         return -EPERM;
     }
     
