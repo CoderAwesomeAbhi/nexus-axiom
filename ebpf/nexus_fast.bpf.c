@@ -40,17 +40,17 @@ static __always_inline int is_allowed(u32 pid)
     return val != NULL;
 }
 
-// LSM hook: mmap_file - BLOCKS W^X ALLOCATIONS
-SEC("lsm/mmap_file")
-int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
+// LSM hook: file_mmap - BLOCKS W^X ALLOCATIONS (including anonymous)
+SEC("lsm/file_mmap")
+int BPF_PROG(file_mmap, struct file *file, unsigned long reqprot,
              unsigned long prot, unsigned long flags)
 {
-    // Check W^X violation
+    // Check W^X violation (works for both file-backed and anonymous mmap)
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
         u32 pid = bpf_get_current_pid_tgid() >> 32;
         
-        // Debug logging - visible in /sys/kernel/debug/tracing/trace_pipe
-        bpf_printk("NEXUS: W^X detected in mmap! PID=%d prot=0x%lx", pid, prot);
+        // Debug logging
+        bpf_printk("NEXUS: W^X detected in mmap! PID=%d prot=0x%lx flags=0x%lx", pid, prot, flags);
         
         // Check allowlist
         if (is_allowed(pid)) {
@@ -72,7 +72,6 @@ int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
         return -EPERM;
     }
     
-    // Allow normal allocations
     return 0;
 }
 
