@@ -50,7 +50,7 @@ int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
         u32 pid = bpf_get_current_pid_tgid() >> 32;
         
         // Debug logging - visible in /sys/kernel/debug/tracing/trace_pipe
-        bpf_printk("NEXUS: W^X detected! PID=%d prot=0x%lx", pid, prot);
+        bpf_printk("NEXUS: W^X detected in mmap! PID=%d prot=0x%lx", pid, prot);
         
         // Check allowlist
         if (is_allowed(pid)) {
@@ -68,11 +68,47 @@ int BPF_PROG(mmap_file, struct file *file, unsigned long reqprot,
         }
         
         // BLOCK THE ALLOCATION
-        bpf_printk("NEXUS: BLOCKING W^X for PID %d", pid);
+        bpf_printk("NEXUS: BLOCKING W^X mmap for PID %d", pid);
         return -EPERM;
     }
     
     // Allow normal allocations
+    return 0;
+}
+
+// LSM hook: file_mprotect - BLOCKS W^X PROTECTION CHANGES
+SEC("lsm/file_mprotect")
+int BPF_PROG(file_mprotect, struct vm_area_struct *vma, unsigned long reqprot,
+             unsigned long prot)
+{
+    // Check W^X violation
+    if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        u32 pid = bpf_get_current_pid_tgid() >> 32;
+        
+        // Debug logging
+        bpf_printk("NEXUS: W^X detected in mprotect! PID=%d prot=0x%lx", pid, prot);
+        
+        // Check allowlist
+        if (is_allowed(pid)) {
+            bpf_printk("NEXUS: PID %d is allowed", pid);
+            return 0;
+        }
+        
+        // Log to ring buffer
+        struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
+        if (e) {
+            e->pid = pid;
+            e->blocked = 1;
+            e->timestamp = bpf_ktime_get_ns();
+            bpf_ringbuf_submit(e, 0);
+        }
+        
+        // BLOCK THE PROTECTION CHANGE
+        bpf_printk("NEXUS: BLOCKING W^X mprotect for PID %d", pid);
+        return -EPERM;
+    }
+    
+    // Allow normal protection changes
     return 0;
 }
 
