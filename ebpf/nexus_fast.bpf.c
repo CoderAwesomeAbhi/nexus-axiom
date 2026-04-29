@@ -33,11 +33,38 @@ struct {
     __type(value, u32);
 } allowlist SEC(".maps");
 
+// JIT compiler detection - check if process is a known JIT runtime
+static __always_inline int is_jit_runtime(u32 pid)
+{
+    char comm[16];
+    bpf_get_current_comm(&comm, sizeof(comm));
+    
+    // Allow common JIT runtimes
+    // node, java, python, chrome, firefox, etc.
+    if (comm[0] == 'n' && comm[1] == 'o' && comm[2] == 'd' && comm[3] == 'e') // node
+        return 1;
+    if (comm[0] == 'j' && comm[1] == 'a' && comm[2] == 'v' && comm[3] == 'a') // java
+        return 1;
+    if (comm[0] == 'p' && comm[1] == 'y' && comm[2] == 't' && comm[3] == 'h') // python
+        return 1;
+    if (comm[0] == 'c' && comm[1] == 'h' && comm[2] == 'r' && comm[3] == 'o') // chrome
+        return 1;
+    if (comm[0] == 'f' && comm[1] == 'i' && comm[2] == 'r' && comm[3] == 'e') // firefox
+        return 1;
+    
+    return 0;
+}
+
 // Fast path: Allowlist check
 static __always_inline int is_allowed(u32 pid)
 {
+    // Check explicit allowlist
     u32 *val = bpf_map_lookup_elem(&allowlist, &pid);
-    return val != NULL;
+    if (val != NULL)
+        return 1;
+    
+    // Check if JIT runtime
+    return is_jit_runtime(pid);
 }
 
 // LSM hook: mmap_file - BLOCKS W^X ALLOCATIONS

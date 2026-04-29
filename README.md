@@ -113,6 +113,29 @@ sudo ./target/release/nexus-axiom start
 
 ## How It Works
 
+### Handling JIT Compilers
+
+**Q: Won't this kill Node.js, Java, Python, and browsers?**
+
+**A: No. Nexus Axiom automatically allowlists JIT runtimes.**
+
+JIT compilers (V8, JVM, PyPy) legitimately need W^X memory. Nexus Axiom detects these by process name:
+- `node` (Node.js/V8)
+- `java` (JVM)
+- `python` (CPython/PyPy)
+- `chrome` (Chromium/V8)
+- `firefox` (SpiderMonkey)
+
+**Exploits are different:**
+- Unknown process names (`exploit`, `pwn`, custom binaries)
+- Short-lived processes
+- Suspicious parent processes
+
+**You can also manually allowlist:**
+```bash
+sudo nexus-axiom allowlist add <pid>
+```
+
 ### The Technical Deep-Dive
 
 ```c
@@ -176,12 +199,14 @@ int trace_mmap_enter(...) {
 
 ## Comparison
 
-| Tool | Blocks Exploits | Kills Processes | LSM + Tracepoint | Overhead |
-|------|----------------|-----------------|------------------|----------|
+| Tool | Instant Kill | LSM + Tracepoint | JIT-Aware | Overhead |
+|------|-------------|------------------|-----------|----------|
 | **Nexus Axiom** | ✅ Yes | ✅ Yes | ✅ Yes | <0.1% |
-| Falco | ❌ No | ❌ No | ❌ No | ~5% |
-| Tetragon | ❌ No | ❌ No | ❌ No | ~3% |
-| SELinux | ⚠️ Partial | ❌ No | ❌ No | ~2% |
+| Falco | ❌ No | ❌ No | N/A | ~5% |
+| Tetragon | ⚠️ Partial | ❌ No | ⚠️ Partial | ~3% |
+| SELinux | ❌ No | ❌ No | N/A | ~2% |
+
+**Our advantage:** Hybrid LSM + Tracepoint catches both file-backed and anonymous W^X, with JIT runtime awareness.
 
 ---
 
