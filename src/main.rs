@@ -67,6 +67,15 @@ fn start_real_protection(audit_only: bool) {
         }
     }
 
+    // Set mode
+    match ebpf_engine.set_mode(audit_only) {
+        Ok(_) => {},
+        Err(e) => {
+            eprintln!("❌ Failed to set mode: {}", e);
+            std::process::exit(1);
+        }
+    }
+
     // Build and apply seccomp filter
     #[cfg(target_os = "linux")]
     {
@@ -91,12 +100,13 @@ fn start_real_protection(audit_only: bool) {
     }
 
     println!("\n✅ Nexus Axiom is now protecting your system");
-    println!("   Mode: {}", if audit_only { "AUDIT ONLY" } else { "ENFORCE" });
+    println!("   Mode: {}", if audit_only { "AUDIT ONLY (logs, doesn't kill)" } else { "ENFORCE (kills exploits)" });
     println!("\n📊 Active Protections:");
     println!("   • W^X memory blocking (eBPF LSM + Seccomp)");
     println!("   • File-backed mmap (LSM mmap_file)");
-    println!("   • Anonymous mmap (Seccomp)");
+    println!("   • Anonymous mmap (Tracepoint)");
     println!("   • Memory protection changes (LSM file_mprotect)");
+    println!("   • JIT runtime allowlist (Node/Java/Python)");
     println!("   • Ring buffer event streaming");
     println!("\n⚠️  Press Ctrl+C to stop (or run: nexus-axiom unload)");
     

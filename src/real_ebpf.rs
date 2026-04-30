@@ -79,6 +79,19 @@ impl RealEBPFEngine {
         self.obj.is_some()
     }
 
+    pub fn set_mode(&self, audit_only: bool) -> Result<()> {
+        let obj = self.obj.as_ref().context("eBPF not loaded")?;
+        let config_map = obj.map("config").context("Failed to find 'config' map")?;
+        
+        let key = 0u32.to_ne_bytes();
+        let value = if audit_only { 0u32 } else { 1u32 }.to_ne_bytes();
+        
+        config_map.update(&key, &value, MapFlags::ANY)
+            .context("Failed to set mode")?;
+        
+        Ok(())
+    }
+
     pub fn process_events(&self) -> Result<()> {
         let obj = self.obj.as_ref().context("eBPF not loaded")?;
         
