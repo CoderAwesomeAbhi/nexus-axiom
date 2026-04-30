@@ -101,24 +101,20 @@ impl RealEBPFEngine {
         println!("\n📊 Monitoring kernel events (Ctrl+C to stop)...");
 
         let running = self.running.clone();
+        let mut kill_count = 0u64;
+        
         let callback = move |data: &[u8]| -> i32 {
             if data.len() < std::mem::size_of::<Event>() {
                 return 0;
             }
 
             let event = unsafe { &*(data.as_ptr() as *const Event) };
-            let comm = String::from_utf8_lossy(&event.comm);
-            let comm = comm.trim_end_matches('\0');
 
             if event.blocked == 1 {
+                kill_count += 1;
                 println!(
-                    "🚨 BLOCKED: PID {} ({}) attempted W^X memory (prot=0x{:x})",
-                    event.pid, comm, event.prot
-                );
-            } else {
-                println!(
-                    "📊 Event: PID {} ({}) mmap (prot=0x{:x})",
-                    event.pid, comm, event.prot
+                    "🚨 THREAT BLOCKED: PID {} | Total Threats Stopped: {}",
+                    event.pid, kill_count
                 );
             }
             0
