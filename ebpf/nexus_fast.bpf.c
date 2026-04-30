@@ -33,6 +33,17 @@ struct {
     __type(value, u32);
 } allowlist SEC(".maps");
 
+// Config map - stores enforcement mode
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, u32);
+    __type(value, u32);
+} config SEC(".maps");
+
+#define MODE_AUDIT 0
+#define MODE_ENFORCE 1
+
 // JIT compiler detection - check if process is a known JIT runtime
 static __always_inline int is_jit_runtime(u32 pid)
 {
@@ -137,18 +148,13 @@ int BPF_PROG(file_mprotect, struct vm_area_struct *vma, unsigned long reqprot,
 SEC("tracepoint/syscalls/sys_enter_mmap")
 int trace_mmap_enter(struct trace_event_raw_sys_enter *ctx)
 {
-    // Extract mmap arguments
-    // mmap(addr, len, prot, flags, fd, offset)
-    // args[2] is prot
     unsigned long prot = ctx->args[2];
     
-    // Check for W^X violation
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
         u32 pid = bpf_get_current_pid_tgid() >> 32;
         
         bpf_printk("NEXUS: W^X in mmap syscall! PID=%d prot=0x%lx", pid, prot);
         
-        // Check allowlist
         if (is_allowed(pid)) {
             bpf_printk("NEXUS: PID %d is allowed", pid);
             return 0;
@@ -161,6 +167,15 @@ int trace_mmap_enter(struct trace_event_raw_sys_enter *ctx)
             e->blocked = 1;
             e->timestamp = bpf_ktime_get_ns();
             bpf_ringbuf_submit(e, 0);
+        }
+        
+        // Check mode
+        u32 key = 0;
+        u32 *mode = bpf_map_lookup_elem(&config, &key);
+        
+        if (mode && *mode == MODE_AUDIT) {
+            bpf_printk("NEXUS: AUDIT MODE - Would kill PID %d", pid);
+            return 0;  // Don't kill in audit mode
         }
         
         // TERMINATE THE PROCESS
