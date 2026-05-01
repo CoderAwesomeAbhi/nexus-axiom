@@ -1,3 +1,4 @@
+<div align="center">
 # 🛡️ Nexus Axiom
 
 **The First eBPF Security Tool That Actually Kills Exploits**
@@ -139,7 +140,7 @@ Benchmark methodology: 1 million mmap() calls, Intel Xeon E5-2680 v4, Linux 6.1
 
 ### One-Liner Install (Recommended)
 ```bash
-curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/nexus-axiom/main/install.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/install.sh | sudo bash
 ```
 
 That's it! Nexus Axiom is now protecting your system.
