@@ -82,9 +82,7 @@ sudo ./target/debug/nexus-axiom start --audit
 
 ## Community
 
-- **Discord**: [Join our server](https://discord.gg/nexus-axiom)
-- **Twitter**: [@nexusaxiom](https://twitter.com/nexusaxiom)
-- **Email**: security@nexus-axiom.dev
+- **GitHub Issues**: [Report bugs](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
 
 ## License
 

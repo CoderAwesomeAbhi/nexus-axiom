@@ -141,7 +141,7 @@ cat /sys/kernel/security/lsm | grep bpf
 
 ### Installation
 ```bash
-git clone https://github.com/YOUR_USERNAME/nexus-axiom
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
 cd nexus-axiom
 make
 sudo make install
@@ -177,9 +177,7 @@ make
 > [!NOTE]
 > **Performance Benchmarks are Pending**
 > 
-> We are preparing a mathematically rigorous, fully reproducible benchmark suite on AWS EC2 hardware. We refuse to publish simulated or theoretical numbers until we have the definitive results. 
-
-**See testing methodology and status:** [BENCHMARKS.md](BENCHMARKS.md)
+> We are preparing a mathematically rigorous, fully reproducible benchmark suite. We refuse to publish simulated or theoretical numbers until we have the definitive results. See [VERIFICATION_GUIDE.md](VERIFICATION_GUIDE.md) for how to run your own benchmarks.
 
 ---
 
@@ -236,7 +234,7 @@ make
 - 🚧 **Kubernetes Operator** - Native K8s deployment
 - 🚧 **Prometheus Metrics** - Export telemetry for monitoring
 
-See [ROADMAP.md](docs/ROADMAP.md) for full feature list.
+
 
 ---
 
@@ -244,7 +242,7 @@ See [ROADMAP.md](docs/ROADMAP.md) for full feature list.
 
 - [Installation Guide](INSTALL.md) - Detailed setup instructions
 - [Architecture](docs/ARCHITECTURE.md) - Technical deep dive
-- [Performance](docs/PERFORMANCE.md) - Benchmarks and tuning
+- [Verification Guide](VERIFICATION_GUIDE.md) - Reproduce our results
 - [Deployment](docs/DEPLOYMENT.md) - Production best practices
 - [Contributing](CONTRIBUTING.md) - How to contribute
 
@@ -301,9 +299,8 @@ If Nexus Axiom helps secure your systems, please star the repo!
 ## 🔗 Links
 
 - **Documentation**: [docs/](docs/)
-- **Discord**: [Join our community](https://discord.gg/nexus-axiom)
-- **Twitter**: [@nexusaxiom](https://twitter.com/nexusaxiom)
-- **Blog**: [Technical deep dives](https://nexus-axiom.dev/blog)
+- **Issues**: [Report a bug](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
+- **Verification**: [Test it yourself for free](VERIFICATION_GUIDE.md)
 
 ---
 

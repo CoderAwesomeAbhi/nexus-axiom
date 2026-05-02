@@ -24,7 +24,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 # Build Nexus Axiom
-git clone https://github.com/YOUR_USERNAME/nexus-axiom
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
 cd nexus-axiom
 cargo build --release
 
@@ -48,7 +48,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 # Build Nexus Axiom
-git clone https://github.com/YOUR_USERNAME/nexus-axiom
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
 cd nexus-axiom
 cargo build --release
 
@@ -66,7 +66,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 # Build Nexus Axiom
-git clone https://github.com/YOUR_USERNAME/nexus-axiom
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
 cd nexus-axiom
 cargo build --release
 

@@ -37,7 +37,8 @@ sudo apt-get install -y clang llvm libbpf-dev linux-headers-$(uname -r) build-es
 
 ### Step 4: Navigate to Project
 ```bash
-cd /mnt/c/Users/abhij/nexus-axiom-final
+cd /mnt/c/Users/<YourUser>/nexus-axiom
+# Or wherever you cloned the repo
 ```
 
 ### Step 5: Build
@@ -74,7 +75,7 @@ aws ec2 run-instances --image-id ami-0c55b159cbfafe1f0 --instance-type t2.micro
 ssh -i your-key.pem ubuntu@<instance-ip>
 
 # Clone project
-git clone https://github.com/YOUR_USERNAME/nexus-axiom
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
 cd nexus-axiom
 ```
 
@@ -239,6 +240,4 @@ You know it's working when:
 
 ## 🆘 Need Help?
 
-- Discord: https://discord.gg/nexus-axiom
-- GitHub Issues: https://github.com/YOUR_USERNAME/nexus-axiom/issues
-- Email: support@nexus-axiom.dev
+- GitHub Issues: https://github.com/CoderAwesomeAbhi/nexus-axiom/issues
