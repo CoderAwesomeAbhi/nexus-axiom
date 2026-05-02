@@ -9,7 +9,9 @@ Cargo.lock
 *.skel.h
 vmlinux.h
 
-# Examples
+# Examples & Tests
+test_exploit
+cve_tests/test_pwnkit
 examples/test_wx_memory
 examples/test_pwnkit
 examples/test_mprotect

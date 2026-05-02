@@ -313,4 +313,18 @@ If Nexus Axiom helps secure your systems, please star the repo!
 
 [⬆ Back to Top](#-nexus-axiom)
 
+
+---
+
+## ⚖️ Legal Disclaimer
+
+Nexus Axiom is a low-level kernel security tool. While it is designed to protect your system, interacting with the Linux Kernel via eBPF involves inherent risks. 
+
+*   **No Warranty:** This software is provided "AS IS" without warranty of any kind, express or implied. 
+*   **Liability:** In no event shall the authors be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software.
+*   **Ethical Use:** This tool is intended for defensive security purposes only. Do not use it for any illegal activities.
+
+---
+<div align="center">
+Built with 🛡️ for a safer Linux ecosystem.
 </div>
