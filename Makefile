@@ -13,14 +13,19 @@ BUILD_DIR = target
 
 all: ebpf rust
 
-# Compile eBPF program
+# Compile eBPF programs
 ebpf:
 	@echo "🔧 Compiling eBPF LSM program..."
 	@mkdir -p $(BUILD_DIR)/bpf
 	$(CLANG) $(BPF_CFLAGS) $(BPF_INCLUDES) \
 		-c $(EBPF_DIR)/nexus_real.bpf.c \
 		-o $(BUILD_DIR)/bpf/nexus_real.bpf.o
-	@echo "✅ eBPF compiled: $(BUILD_DIR)/bpf/nexus_real.bpf.o"
+	@echo "✅ eBPF LSM compiled: $(BUILD_DIR)/bpf/nexus_real.bpf.o"
+	@echo "🔧 Compiling eBPF XDP program..."
+	$(CLANG) $(BPF_CFLAGS) $(BPF_INCLUDES) \
+		-c $(EBPF_DIR)/nexus_net.bpf.c \
+		-o $(BUILD_DIR)/bpf/nexus_net.bpf.o
+	@echo "✅ eBPF XDP compiled: $(BUILD_DIR)/bpf/nexus_net.bpf.o"
 
 # Compile Rust userspace
 rust:

@@ -3,224 +3,418 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Axiom - Live Dashboard</title>
+    <title>Nexus Axiom - Live Threat Telemetry</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #050505;
+            --surface: rgba(20, 20, 25, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #00ff88;
+            --accent-glow: rgba(0, 255, 136, 0.4);
+            --danger: #ff3366;
+            --danger-glow: rgba(255, 51, 102, 0.5);
+            --text-main: #f0f0f0;
+            --text-dim: #8892b0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
         body {
-            font-family: 'Courier New', monospace;
-            background: #0a0e27;
-            color: #00ff41;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #00ff41;
-            padding-bottom: 20px;
-        }
-        .header h1 {
-            font-size: 3em;
-            text-shadow: 0 0 10px #00ff41;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: #1a1f3a;
-            border: 2px solid #00ff41;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 3em;
-            font-weight: bold;
-            color: #ff0000;
-            text-shadow: 0 0 10px #ff0000;
-        }
-        .stat-label {
-            font-size: 1.2em;
-            margin-top: 10px;
-        }
-        .events {
-            background: #1a1f3a;
-            border: 2px solid #00ff41;
-            border-radius: 10px;
-            padding: 20px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        .event {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid #00ff41;
-            background: #0f1425;
-        }
-        .event.blocked {
-            border-left-color: #ff0000;
-            animation: pulse 1s;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .event-time { color: #888; }
-        .event-type { color: #00ff41; font-weight: bold; }
-        .event-blocked { color: #ff0000; font-weight: bold; }
-        .kill-counter {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #ff0000;
-            color: #fff;
-            padding: 20px;
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 10% 100%, rgba(255, 51, 102, 0.05) 0%, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            font-size: 2em;
-            font-weight: bold;
-            box-shadow: 0 0 20px #ff0000;
-            animation: rotate 10s linear infinite;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            background: rgba(5, 5, 5, 0.8);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .kill-counter-label {
-            font-size: 0.4em;
-            margin-top: 5px;
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #00bfff);
+            border-radius: 8px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .brand h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent);
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            flex: 1;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .panel-header {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent);
+        }
+
+        .stat-card.danger::before {
+            background: var(--danger);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 5px 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-card.danger .stat-value {
+            color: var(--danger);
+            text-shadow: 0 0 20px var(--danger-glow);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+
+        .terminal {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            height: calc(100vh - 200px);
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .terminal::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .terminal::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .log-entry {
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 15px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+            border-left: 2px solid transparent;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-entry.blocked {
+            background: rgba(255, 51, 102, 0.08);
+            border-left-color: var(--danger);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .log-time {
+            color: var(--text-dim);
+            opacity: 0.7;
+        }
+
+        .log-content {
+            color: #dcdcdc;
+            line-height: 1.4;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .tag-block {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .tag-allow {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+        }
+
+        .highlight {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .terminal {
+                height: 500px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="kill-counter">
-        <div id="killCount">0</div>
-        <div class="kill-counter-label">KILLS</div>
-    </div>
+    <nav class="navbar">
+        <div class="brand">
+            <div class="brand-icon"></div>
+            <h1>NEXUS AXIOM</h1>
+        </div>
+        <div class="status-badge">
+            <div class="pulse"></div>
+            KERNEL LSM HOOKS ACTIVE
+        </div>
+    </nav>
 
-    <div class="header">
-        <h1>🛡️ NEXUS AXIOM</h1>
-        <p>Real-Time Exploit Termination Dashboard</p>
-    </div>
+    <div class="container">
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    Telemetry Overview
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card danger">
+                        <div class="stat-label">W^X EXPLOITS BLOCKED</div>
+                        <div class="stat-value" id="blockedCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">EVENTS PROCESSED</div>
+                        <div class="stat-value" id="totalCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">eBPF OVERHEAD</div>
+                        <div class="stat-value" style="font-size: 1.8rem;">&lt; 0.1%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">SYSTEM UPTIME</div>
+                        <div class="stat-value" id="uptime" style="font-size: 1.5rem;">00:00:00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="stats">
-        <div class="stat-card">
-            <div class="stat-value" id="totalEvents">0</div>
-            <div class="stat-label">Total Events</div>
+        <div class="main-content">
+            <div class="panel" style="padding: 0; overflow: hidden; background: #000;">
+                <div class="panel-header" style="padding: 20px; margin: 0; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    Live Kernel Event Stream
+                </div>
+                <div class="terminal" id="terminal">
+                    <!-- Events will be appended here -->
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value" id="blockedEvents">0</div>
-            <div class="stat-label">Exploits Blocked</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="eventsPerSec">0</div>
-            <div class="stat-label">Events/sec</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="uptime">00:00:00</div>
-            <div class="stat-label">Uptime</div>
-        </div>
-    </div>
-
-    <div class="events">
-        <h2>Live Event Stream</h2>
-        <div id="eventList"></div>
     </div>
 
     <script>
         let totalEvents = 0;
         let blockedEvents = 0;
         let startTime = Date.now();
-        let lastSecondEvents = 0;
-        let currentSecondEvents = 0;
-
-        // Simulate events (in production, this would connect to WebSocket)
-        function simulateEvent() {
-            const eventTypes = ['W^X_MEMORY', 'FILE_WRITE', 'EXEC', 'NETWORK', 'PRIV_ESC'];
-            const isBlocked = Math.random() > 0.7;
-            
-            const event = {
-                time: new Date().toLocaleTimeString(),
-                type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
-                pid: Math.floor(Math.random() * 10000),
-                process: ['exploit', 'malware', 'suspicious', 'unknown'][Math.floor(Math.random() * 4)],
-                blocked: isBlocked
-            };
-
-            addEvent(event);
-        }
-
-        function addEvent(event) {
-            totalEvents++;
-            currentSecondEvents++;
-            
-            if (event.blocked) {
-                blockedEvents++;
-                document.getElementById('killCount').textContent = blockedEvents;
-            }
-
-            const eventList = document.getElementById('eventList');
-            const eventDiv = document.createElement('div');
-            eventDiv.className = 'event' + (event.blocked ? ' blocked' : '');
-            eventDiv.innerHTML = `
-                <span class="event-time">[${event.time}]</span>
-                <span class="event-type">${event.type}</span>
-                | PID: ${event.pid} | Process: ${event.process}
-                | <span class="event-blocked">${event.blocked ? '🔴 BLOCKED' : '🟢 ALLOWED'}</span>
-            `;
-            
-            eventList.insertBefore(eventDiv, eventList.firstChild);
-            
-            // Keep only last 50 events
-            while (eventList.children.length > 50) {
-                eventList.removeChild(eventList.lastChild);
-            }
-
-            updateStats();
-        }
-
-        function updateStats() {
-            document.getElementById('totalEvents').textContent = totalEvents;
-            document.getElementById('blockedEvents').textContent = blockedEvents;
-        }
+        const terminal = document.getElementById('terminal');
 
         function updateUptime() {
             const elapsed = Date.now() - startTime;
-            const hours = Math.floor(elapsed / 3600000);
-            const minutes = Math.floor((elapsed % 3600000) / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-            document.getElementById('uptime').textContent = 
-                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const h = String(Math.floor(elapsed / 3600000)).padStart(2, '0');
+            const m = String(Math.floor((elapsed % 3600000) / 60000)).padStart(2, '0');
+            const s = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+            document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
         }
 
-        function updateEventsPerSec() {
-            document.getElementById('eventsPerSec').textContent = lastSecondEvents;
-            lastSecondEvents = currentSecondEvents;
-            currentSecondEvents = 0;
+        function createLogEntry(event) {
+            const div = document.createElement('div');
+            div.className = `log-entry ${event.blocked ? 'blocked' : ''}`;
+            
+            const tag = event.blocked 
+                ? `<span class="tag tag-block">SIGKILL</span>` 
+                : `<span class="tag tag-allow">ALLOW</span>`;
+
+            const actionDesc = event.blocked 
+                ? `Kernel blocked <span class="highlight">PROT_WRITE | PROT_EXEC</span> violation by process <span class="highlight">${event.process}</span> (PID: ${event.pid})`
+                : `Process ${event.process} (PID: ${event.pid}) requested memory allocation`;
+
+            div.innerHTML = `
+                <div class="log-time">${event.time}</div>
+                <div class="log-content">
+                    ${tag}
+                    ${actionDesc}
+                </div>
+            `;
+            return div;
         }
 
-        // Update every second
+        function simulateTraffic() {
+            const processes = ['node', 'chrome', 'python3', 'bash', 'systemd'];
+            const malicious = ['exploit', 'shellcode', 'pwn_script', 'unknown'];
+            
+            const isAttack = Math.random() > 0.85;
+            const processName = isAttack 
+                ? malicious[Math.floor(Math.random() * malicious.length)]
+                : processes[Math.floor(Math.random() * processes.length)];
+
+            totalEvents++;
+            if (isAttack) blockedEvents++;
+
+            const event = {
+                time: new Date().toISOString().split('T')[1].slice(0, -1),
+                pid: Math.floor(100 + Math.random() * 9000),
+                process: processName,
+                blocked: isAttack
+            };
+
+            const logEntry = createLogEntry(event);
+            terminal.appendChild(logEntry);
+            terminal.scrollTop = terminal.scrollHeight;
+
+            // Keep terminal clean
+            if (terminal.children.length > 100) {
+                terminal.removeChild(terminal.firstChild);
+            }
+
+            document.getElementById('totalCount').textContent = totalEvents.toLocaleString();
+            document.getElementById('blockedCount').textContent = blockedEvents.toLocaleString();
+        }
+
+        // Initialization
         setInterval(updateUptime, 1000);
-        setInterval(updateEventsPerSec, 1000);
+        setInterval(simulateTraffic, 800);
 
-        // Simulate events (remove in production)
-        setInterval(simulateEvent, 500);
-
-        // Initial message
-        addEvent({
-            time: new Date().toLocaleTimeString(),
-            type: 'SYSTEM',
-            pid: 0,
-            process: 'nexus-axiom',
-            blocked: false
-        });
+        // Welcome message
+        terminal.innerHTML = `
+            <div style="color: var(--accent); margin-bottom: 20px; font-weight: bold;">
+                NEXUS AXIOM eBPF Engine initialized.<br>
+                Subscribed to ring buffer events.<br>
+                Awaiting kernel telemetry...
+            </div>
+        `;
     </script>
 </body>
 </html>

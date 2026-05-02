@@ -1,19 +1,33 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="Nexus Axiom Logo" width="200" style="border-radius: 20px"/>
+
 # 🛡️ Nexus Axiom
 
 **The First eBPF Security Tool That Actually Kills Exploits**
 
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
-[![Linux](https://img.shields.io/badge/platform-Linux%205.8%2B-green.svg)](https://kernel.org)
-[![eBPF](https://img.shields.io/badge/eBPF-LSM%20Hooks-orange.svg)](https://ebpf.io)
-[![Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=social)](https://github.com/CoderAwesomeAbhi/nexus-axiom)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=for-the-badge)](LICENSE)
+[![Linux](https://img.shields.io/badge/platform-Linux%205.8%2B-green.svg?style=for-the-badge)](https://kernel.org)
+[![Rust](https://img.shields.io/badge/Rust-1.70+-orange.svg?style=for-the-badge)](https://rust-lang.org)
+[![eBPF](https://img.shields.io/badge/eBPF-LSM%20Hooks-purple.svg?style=for-the-badge)](https://ebpf.io)
+[![Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom)
 
 > **Most security tools watch attacks happen. Nexus Axiom terminates them.**
 
-[Quick Start](#-quick-start) • [Live Demo](#-live-demo) • [How It Works](#-how-it-works) • [Enterprise Features](#-enterprise-features) • [Roadmap](#-roadmap)
+[Quick Start](#-quick-start) • [How It Works](#-how-it-works) • [Documentation](docs/ARCHITECTURE.md) • [Verification Guide](VERIFICATION_GUIDE.md)
 
 </div>
+
+---
+
+## 🎥 Verification & Proof
+
+Nexus Axiom is built on real eBPF LSM and XDP hooks. We encourage all security engineers to verify our claims directly on isolated hardware. 
+
+👉 **[See the Verification Guide](VERIFICATION_GUIDE.md)** for exact reproduction steps (including **FREE** options like WSL2 and Oracle Cloud) to:
+1. Compile the eBPF code from source.
+2. Run the benchmarking suite against Falco.
+3. Observe live termination of W^X memory exploits.
 
 ---
 
@@ -161,18 +175,12 @@ make
 
 ## 📊 Performance
 
-| Metric | Value | Comparison |
-|--------|-------|------------|
-| **CPU Overhead** | <0.5% | Falco: ~2-3% |
-| **Memory Usage** | ~15MB | Falco: ~50MB |
-| **Latency** | <100ns | Falco: ~1μs |
-| **Events/sec** | 1M+ | Falco: ~100K |
+> [!NOTE]
+> **Performance Benchmarks are Pending**
+> 
+> We are preparing a mathematically rigorous, fully reproducible benchmark suite on AWS EC2 hardware. We refuse to publish simulated or theoretical numbers until we have the definitive results. 
 
-**Benchmark yourself:**
-```bash
-cd benchmarks
-./benchmark_vs_falco.sh
-```
+**See testing methodology and status:** [BENCHMARKS.md](BENCHMARKS.md)
 
 ---
 
@@ -223,12 +231,11 @@ cd benchmarks
 - ✅ **Zero-Copy Events** - <100ns latency
 
 ### Coming Soon (v1.1-1.3)
-- 🚧 **AI-Powered Threat Detection** - LLM verdict engine
-- 🚧 **Hardware Security** - TPM, SGX, cache timing attacks
-- 🚧 **Cloud Integration** - AWS, GCP, Azure support
+- 🚧 **Full BPF CO-RE Support** - Seamless deployment across all kernel versions
+- 🚧 **File System Monitoring** - Block malicious writes to critical directories
+- 🚧 **Container Awareness** - Enforce policies per container/namespace
 - 🚧 **Kubernetes Operator** - Native K8s deployment
-- 🚧 **SIEM Connectors** - Splunk, ELK, Datadog
-- 🚧 **Compliance Reports** - PCI-DSS, SOC2, HIPAA
+- 🚧 **Prometheus Metrics** - Export telemetry for monitoring
 
 See [ROADMAP.md](docs/ROADMAP.md) for full feature list.
 
@@ -251,24 +258,19 @@ See [ROADMAP.md](docs/ROADMAP.md) for full feature list.
 - [x] Process allowlisting
 - [x] Real-time monitoring
 - [x] Audit mode
+- [x] Premium Live Dashboard
 
-### Phase 2: Detection (v1.1-1.2) 🚧
-- [ ] Behavior-based anomaly detection
-- [ ] AI-powered threat classification
-- [ ] Automatic exploit signature generation
-- [ ] Integration with threat intelligence feeds
+### Phase 2: Enhanced Enforcement (v1.1-1.2) 🚧
+- [ ] Network socket filtering (XDP)
+- [ ] Advanced file system access control
+- [ ] Syscall argument filtering
+- [ ] Improved CI/CD integration
 
-### Phase 3: Enterprise (v1.3-1.5) 📋
-- [ ] Multi-tenant support
+### Phase 3: Enterprise Observability (v1.3-1.5) 📋
+- [ ] Prometheus metrics endpoint
 - [ ] Centralized management dashboard
-- [ ] Compliance reporting
-- [ ] Cloud-native deployment
-
-### Phase 4: Advanced (v2.0+) 🔮
-- [ ] Hardware-level security (TPM, SGX)
-- [ ] Quantum-resistant cryptography
-- [ ] Autonomous patching
-- [ ] Zero-trust architecture
+- [ ] Custom JSON logging templates
+- [ ] K8s native policy engine
 
 ---
 
@@ -301,19 +303,6 @@ If Nexus Axiom helps secure your systems, please star the repo!
 
 - **Documentation**: [docs/](docs/)
 - **Discord**: [Join our community](https://discord.gg/nexus-axiom)
-- **Twitter**: [@nexusaxiom](https://twitter.com/nexusaxiom)
-- **Blog**: [Technical deep dives](https://nexus-axiom.dev/blog)
-
----
-
-<div align="center">
-
-**Built with ❤️ by security engineers who are tired of watching exploits succeed**
-
-[⬆ Back to Top](#-nexus-axiom)
-
-</div>
-](https://discord.gg/nexus-axiom)
 - **Twitter**: [@nexusaxiom](https://twitter.com/nexusaxiom)
 - **Blog**: [Technical deep dives](https://nexus-axiom.dev/blog)
 

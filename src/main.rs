@@ -1,10 +1,17 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 #[cfg(target_os = "linux")]
 mod ebpf_engine;
+#[cfg(target_os = "linux")]
+pub mod net_engine;
+#[cfg(target_os = "linux")]
+pub mod ai_analyst;
+#[cfg(target_os = "linux")]
+pub mod metrics;
+#[cfg(target_os = "linux")]
+pub mod seccomp_engine;
 
 #[derive(Parser)]
 #[command(name = "nexus-axiom")]
@@ -31,9 +38,9 @@ enum Commands {
 
 fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
-    
+
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Start { audit } => start_protection(audit),
         Commands::Monitor => monitor_events(),
@@ -44,39 +51,67 @@ fn main() -> Result<()> {
 #[cfg(target_os = "linux")]
 fn start_protection(audit_mode: bool) -> Result<()> {
     use ebpf_engine::EbpfEngine;
-    
+    use net_engine::NetEngine;
+    use seccomp_engine::SeccompEngine;
+    use metrics::MetricsServer;
+    use std::sync::Arc;
+
     println!("\n🛡️  NEXUS AXIOM v1.0.0");
     println!("{}", "=".repeat(70));
     println!("🟢 Starting Real-Time Protection...\n");
-    
+
     // Check root
     if !nix::unistd::Uid::effective().is_root() {
         anyhow::bail!("❌ Must run as root (sudo)");
     }
-    
-    let mut engine = EbpfEngine::new()?;
-    
+
+    // 1. Secure the daemon itself
+    let mut seccomp = SeccompEngine::new();
+    seccomp.apply_strict_profile()?;
+
+    // 2. Start Metrics Server
+    let metrics = Arc::new(MetricsServer::new());
+    metrics.start(9090);
+
+    let mut engine = EbpfEngine::new(metrics.clone())?;
+    let mut net_engine = NetEngine::new()?;
+
     // Load and attach eBPF programs
-    engine.load_and_attach()
-        .context("Failed to load eBPF programs")?;
-    
-    println!("✅ eBPF LSM hooks loaded");
-    println!("✅ Mode: {}", if audit_mode { "AUDIT (logs only)" } else { "ENFORCE (kills exploits)" });
+    engine
+        .load_and_attach()
+        .context("Failed to load eBPF LSM programs")?;
+
+    net_engine
+        .load_and_attach()
+        .context("Failed to load eBPF XDP programs")?;
+
+    // Block a test malicious IP for demonstration
+    net_engine.block_ip(std::net::Ipv4Addr::new(198, 51, 100, 42))?;
+
+    println!("✅ eBPF hooks loaded");
+    println!(
+        "✅ Mode: {}",
+        if audit_mode {
+            "AUDIT (logs only)"
+        } else {
+            "ENFORCE (kills exploits)"
+        }
+    );
     println!("\n📊 Active Protections:");
-    println!("   • W^X memory blocking (LSM hooks)");
-    println!("   • Process execution monitoring");
+    println!("   • W^X memory blocking (LSM)");
+    println!("   • Network filtering (XDP)");
     println!("\n⚠️  Press Ctrl+C to stop\n");
-    
+
     // Setup signal handler
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
     })?;
-    
+
     // Process events
     engine.process_events(running)?;
-    
+
     println!("\n✅ Nexus Axiom stopped");
     Ok(())
 }
@@ -88,19 +123,23 @@ fn start_protection(_audit_mode: bool) -> Result<()> {
 
 fn monitor_events() -> Result<()> {
     println!("📊 Real-Time Event Monitor\n");
-    
+
     #[cfg(target_os = "linux")]
     {
         use ebpf_engine::EbpfEngine;
-        let mut engine = EbpfEngine::new()?;
+        use metrics::MetricsServer;
+        use std::sync::Arc;
+        
+        let metrics = Arc::new(MetricsServer::new());
+        let mut engine = EbpfEngine::new(metrics)?;
         engine.load_and_attach()?;
         let running = Arc::new(AtomicBool::new(true));
         engine.process_events(running)?;
     }
-    
+
     #[cfg(not(target_os = "linux"))]
     anyhow::bail!("Only available on Linux");
-    
+
     Ok(())
 }
 
@@ -111,6 +150,6 @@ fn show_status() -> Result<()> {
     println!("\n📊 Features:");
     println!("   • W^X memory blocking");
     println!("   • Process execution monitoring");
-    
+
     Ok(())
 }
