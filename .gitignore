@@ -1,0 +1,29 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# eBPF
+*.o
+*.skel.h
+vmlinux.h
+
+# Examples
+examples/test_wx_memory
+examples/test_pwnkit
+examples/test_mprotect
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

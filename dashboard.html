@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Axiom - Live Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00ff41;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #00ff41;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 3em;
+            text-shadow: 0 0 10px #00ff41;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #1a1f3a;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 10px #ff0000;
+        }
+        .stat-label {
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        .events {
+            background: #1a1f3a;
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .event {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #00ff41;
+            background: #0f1425;
+        }
+        .event.blocked {
+            border-left-color: #ff0000;
+            animation: pulse 1s;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .event-time { color: #888; }
+        .event-type { color: #00ff41; font-weight: bold; }
+        .event-blocked { color: #ff0000; font-weight: bold; }
+        .kill-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff0000;
+            color: #fff;
+            padding: 20px;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            box-shadow: 0 0 20px #ff0000;
+            animation: rotate 10s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .kill-counter-label {
+            font-size: 0.4em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="kill-counter">
+        <div id="killCount">0</div>
+        <div class="kill-counter-label">KILLS</div>
+    </div>
+
+    <div class="header">
+        <h1>🛡️ NEXUS AXIOM</h1>
+        <p>Real-Time Exploit Termination Dashboard</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-value" id="totalEvents">0</div>
+            <div class="stat-label">Total Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="blockedEvents">0</div>
+            <div class="stat-label">Exploits Blocked</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="eventsPerSec">0</div>
+            <div class="stat-label">Events/sec</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="uptime">00:00:00</div>
+            <div class="stat-label">Uptime</div>
+        </div>
+    </div>
+
+    <div class="events">
+        <h2>Live Event Stream</h2>
+        <div id="eventList"></div>
+    </div>
+
+    <script>
+        let totalEvents = 0;
+        let blockedEvents = 0;
+        let startTime = Date.now();
+        let lastSecondEvents = 0;
+        let currentSecondEvents = 0;
+
+        // Simulate events (in production, this would connect to WebSocket)
+        function simulateEvent() {
+            const eventTypes = ['W^X_MEMORY', 'FILE_WRITE', 'EXEC', 'NETWORK', 'PRIV_ESC'];
+            const isBlocked = Math.random() > 0.7;
+            
+            const event = {
+                time: new Date().toLocaleTimeString(),
+                type: eventTypes[Math.floor(Math.random() * eventTypes.length)],
+                pid: Math.floor(Math.random() * 10000),
+                process: ['exploit', 'malware', 'suspicious', 'unknown'][Math.floor(Math.random() * 4)],
+                blocked: isBlocked
+            };
+
+            addEvent(event);
+        }
+
+        function addEvent(event) {
+            totalEvents++;
+            currentSecondEvents++;
+            
+            if (event.blocked) {
+                blockedEvents++;
+                document.getElementById('killCount').textContent = blockedEvents;
+            }
+
+            const eventList = document.getElementById('eventList');
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event' + (event.blocked ? ' blocked' : '');
+            eventDiv.innerHTML = `
+                <span class="event-time">[${event.time}]</span>
+                <span class="event-type">${event.type}</span>
+                | PID: ${event.pid} | Process: ${event.process}
+                | <span class="event-blocked">${event.blocked ? '🔴 BLOCKED' : '🟢 ALLOWED'}</span>
+            `;
+            
+            eventList.insertBefore(eventDiv, eventList.firstChild);
+            
+            // Keep only last 50 events
+            while (eventList.children.length > 50) {
+                eventList.removeChild(eventList.lastChild);
+            }
+
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalEvents').textContent = totalEvents;
+            document.getElementById('blockedEvents').textContent = blockedEvents;
+        }
+
+        function updateUptime() {
+            const elapsed = Date.now() - startTime;
+            const hours = Math.floor(elapsed / 3600000);
+            const minutes = Math.floor((elapsed % 3600000) / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+            document.getElementById('uptime').textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateEventsPerSec() {
+            document.getElementById('eventsPerSec').textContent = lastSecondEvents;
+            lastSecondEvents = currentSecondEvents;
+            currentSecondEvents = 0;
+        }
+
+        // Update every second
+        setInterval(updateUptime, 1000);
+        setInterval(updateEventsPerSec, 1000);
+
+        // Simulate events (remove in production)
+        setInterval(simulateEvent, 500);
+
+        // Initial message
+        addEvent({
+            time: new Date().toLocaleTimeString(),
+            type: 'SYSTEM',
+            pid: 0,
+            process: 'nexus-axiom',
+            blocked: false
+        });
+    </script>
+</body>
+</html>
