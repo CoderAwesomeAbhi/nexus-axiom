@@ -14,7 +14,7 @@ impl SeccompEngine {
 
     pub fn apply_strict_profile(&mut self) -> Result<()> {
         log::info!("🔒 Applying strict Seccomp-BPF profile to Nexus Axiom daemon...");
-        
+
         // In a full production scenario, we would use the `seccomp` or `libseccomp` crate
         // to build a BPF filter that only allows:
         // - read/write (for ringbuffer and logs)
@@ -22,11 +22,11 @@ impl SeccompEngine {
         // - bpf (for interacting with maps)
         // - exit/exit_group
         // And strictly blocks execve, ptrace, and network sockets.
-        
+
         // For this milestone, we log the enforcement.
         self.enabled = true;
         log::info!("✅ Seccomp profile applied. Daemon is now isolated.");
-        
+
         Ok(())
     }
 }

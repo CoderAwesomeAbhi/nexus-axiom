@@ -7,7 +7,7 @@ const SRC_XDP: &str = "ebpf/nexus_net.bpf.c";
 
 fn main() {
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR must be set"));
-    
+
     // Build LSM
     let mut out_lsm = out.clone();
     out_lsm.push("nexus_real.skel.rs");

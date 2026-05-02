@@ -3,13 +3,13 @@ use clap::{Parser, Subcommand};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "linux")]
-mod ebpf_engine;
-#[cfg(target_os = "linux")]
-pub mod net_engine;
-#[cfg(target_os = "linux")]
 pub mod ai_analyst;
 #[cfg(target_os = "linux")]
+mod ebpf_engine;
+#[cfg(target_os = "linux")]
 pub mod metrics;
+#[cfg(target_os = "linux")]
+pub mod net_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_engine;
 
@@ -51,9 +51,9 @@ fn main() -> Result<()> {
 #[cfg(target_os = "linux")]
 fn start_protection(audit_mode: bool) -> Result<()> {
     use ebpf_engine::EbpfEngine;
+    use metrics::MetricsServer;
     use net_engine::NetEngine;
     use seccomp_engine::SeccompEngine;
-    use metrics::MetricsServer;
     use std::sync::Arc;
 
     println!("\n🛡️  NEXUS AXIOM v1.0.0");
@@ -129,7 +129,7 @@ fn monitor_events() -> Result<()> {
         use ebpf_engine::EbpfEngine;
         use metrics::MetricsServer;
         use std::sync::Arc;
-        
+
         let metrics = Arc::new(MetricsServer::new());
         let mut engine = EbpfEngine::new(metrics)?;
         engine.load_and_attach()?;

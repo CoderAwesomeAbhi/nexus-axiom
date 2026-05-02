@@ -20,13 +20,16 @@ impl MetricsServer {
     pub fn start(&self, port: u16) {
         let blocked = self.blocked_events.clone();
         let total = self.total_events.clone();
-        
+
         thread::spawn(move || {
             let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
                 .expect("Failed to bind metrics server");
-            
-            log::info!("📈 Prometheus Metrics endpoint listening on http://0.0.0.0:{}/metrics", port);
-            
+
+            log::info!(
+                "📈 Prometheus Metrics endpoint listening on http://0.0.0.0:{}/metrics",
+                port
+            );
+
             for stream in listener.incoming() {
                 match stream {
                     Ok(mut stream) => {

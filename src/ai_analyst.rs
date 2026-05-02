@@ -19,8 +19,12 @@ impl AIAnalyst {
 
     /// Queries the AI to analyze a blocked threat. Uses blocking reqwest for simplicity in the event loop.
     pub fn analyze_threat(&self, pid: u32, comm: &str, reason: &str) -> Result<String> {
-        log::info!("🧠 Initiating AI Threat Analysis for {} (PID: {})", comm, pid);
-        
+        log::info!(
+            "🧠 Initiating AI Threat Analysis for {} (PID: {})",
+            comm,
+            pid
+        );
+
         let prompt = format!(
             "You are an expert SOC analyst. Analyze this blocked execution event:\n\
             Process: {}\n\
@@ -52,7 +56,8 @@ impl AIAnalyst {
             "max_tokens": 100
         });
 
-        let resp = client.post(&self.endpoint)
+        let resp = client
+            .post(&self.endpoint)
             .bearer_auth(&self.api_key)
             .json(&body)
             .send()?;
