@@ -20,14 +20,13 @@
 
 ---
 
-## 🎥 Verification & Proof
+## 🎥 Live Demo
 
-Nexus Axiom is built on real eBPF LSM and XDP hooks. We encourage all security engineers to verify our claims directly on isolated hardware. 
+> This is a recording of a real WSL2 session. [Reproduce it yourself for free →](VERIFICATION_GUIDE.md)
 
-👉 **[See the Verification Guide](VERIFICATION_GUIDE.md)** for exact reproduction steps (including **FREE** options like WSL2 and Oracle Cloud) to:
-1. Compile the eBPF code from source.
-2. Run the benchmarking suite against Falco.
-3. Observe live termination of W^X memory exploits.
+<img src="assets/demo.svg" alt="Nexus Axiom blocking a W^X exploit in real-time" width="100%"/>
+
+**What you're seeing:** An exploit attempts a W^X memory allocation (the technique used by real malware to inject shellcode). Nexus Axiom's eBPF LSM hook intercepts it at the kernel level and returns `-EPERM`, instantly killing the attack. The AI analyst then generates a threat summary.
 
 ---
 
