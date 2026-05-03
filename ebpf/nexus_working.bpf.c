@@ -10,6 +10,33 @@ char LICENSE[] SEC("license") = "GPL";
 #define PROT_WRITE 0x2
 #define PROT_EXEC  0x4
 
+// Event struct
+struct event {
+    __u32 pid;
+    __u32 uid;
+    __u64 timestamp;
+    __u32 prot;
+    __u32 flags;
+    __u8  blocked;
+    __u8  event_type;
+    __u8  _pad[2];
+    __u64 cgroup_id;
+    __u8  comm[16];
+};
+
+// Maps
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 1 << 20);
+} events SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1024);
+    __type(key, __u32);
+    __type(value, __u8);
+} allowlist SEC(".maps");
+
 // LSM hook: mmap_file - Block W^X mmap
 SEC("lsm/mmap_file")
 int mmap_file_hook(void *ctx)
