@@ -11,8 +11,6 @@ include!(concat!(env!("OUT_DIR"), "/nexus_real.skel.rs"));
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
-#[repr(C)]
-#[derive(Debug, Clone, Copy)]
 struct Event {
     pid: u32,
     uid: u32,
