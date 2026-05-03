@@ -7,9 +7,19 @@ pub struct SeccompEngine {
     enabled: bool,
 }
 
+impl Default for SeccompEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SeccompEngine {
     pub fn new() -> Self {
         Self { enabled: false }
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
     }
 
     pub fn apply_strict_profile(&mut self) -> Result<()> {

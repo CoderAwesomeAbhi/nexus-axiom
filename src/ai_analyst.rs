@@ -1,20 +1,35 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use reqwest::blocking::Client;
 use serde_json::json;
 use std::time::Duration;
 
 /// AI Analyst uses a local or remote LLM to generate plain-English
 /// threat analysis reports for blocked processes.
 pub struct AIAnalyst {
-    api_key: String,
+    api_key: Option<String>,
     endpoint: String,
+    client: Client,
 }
 
 impl AIAnalyst {
-    pub fn new(api_key: Option<String>) -> Self {
-        Self {
-            api_key: api_key.unwrap_or_else(|| "mock_key".to_string()),
-            endpoint: "https://api.openai.com/v1/chat/completions".to_string(), // Can be overridden for local Ollama
-        }
+    pub fn new(api_key: Option<String>) -> Result<Self> {
+        let api_key = api_key
+            .or_else(|| std::env::var("NEXUS_AXIOM_OPENAI_API_KEY").ok())
+            .or_else(|| std::env::var("OPENAI_API_KEY").ok());
+
+        let endpoint = std::env::var("NEXUS_AXIOM_AI_ENDPOINT")
+            .unwrap_or_else(|_| "https://api.openai.com/v1/chat/completions".to_string());
+
+        let client = Client::builder()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .context("failed to build AI HTTP client")?;
+
+        Ok(Self {
+            api_key,
+            endpoint,
+            client,
+        })
     }
 
     /// Queries the AI to analyze a blocked threat. Uses blocking reqwest for simplicity in the event loop.
@@ -34,18 +49,13 @@ impl AIAnalyst {
             comm, pid, reason
         );
 
-        let client = reqwest::blocking::Client::builder()
-            .timeout(Duration::from_secs(5))
-            .build()?;
-
-        // If it's a mock key, we simulate the AI response to prevent crashing if the user hasn't configured an API key.
-        if self.api_key == "mock_key" {
-            std::thread::sleep(Duration::from_secs(1));
+        // If no key is configured, return fast deterministic output.
+        let Some(api_key) = self.api_key.as_ref() else {
             return Ok(format!(
                 "AI Analysis (Simulated): The process '{}' attempted a highly suspicious W^X memory allocation indicative of shellcode injection or an unpacking routine. Recommendation: Isolate the host and investigate the origin of the binary.",
                 comm
             ));
-        }
+        };
 
         let body = json!({
             "model": "gpt-3.5-turbo",
@@ -56,21 +66,23 @@ impl AIAnalyst {
             "max_tokens": 100
         });
 
-        let resp = client
+        let resp = self
+            .client
             .post(&self.endpoint)
-            .bearer_auth(&self.api_key)
+            .bearer_auth(api_key)
             .json(&body)
-            .send()?;
+            .send()
+            .context("AI request failed")?;
 
-        if resp.status().is_success() {
-            let json: serde_json::Value = resp.json()?;
-            if let Some(text) = json["choices"][0]["message"]["content"].as_str() {
-                Ok(text.trim().to_string())
-            } else {
-                Ok("AI Response format error".to_string())
-            }
-        } else {
-            Ok(format!("AI Analysis failed: HTTP {}", resp.status()))
+        let status = resp.status();
+        if !status.is_success() {
+            anyhow::bail!("AI analysis failed: HTTP {}", status);
         }
+
+        let json: serde_json::Value = resp.json().context("failed to parse AI response payload")?;
+        let text = json["choices"][0]["message"]["content"]
+            .as_str()
+            .context("AI response missing choices[0].message.content")?;
+        Ok(text.trim().to_string())
     }
 }

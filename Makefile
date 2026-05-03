@@ -5,7 +5,9 @@ CARGO ?= cargo
 
 # eBPF compilation flags
 BPF_CFLAGS = -O2 -target bpf -g -Wall -Werror
-BPF_INCLUDES = -I/usr/include -I/usr/include/x86_64-linux-gnu
+ARCH := $(shell uname -m)
+ARCH_INC := /usr/include/$(ARCH)-linux-gnu
+BPF_INCLUDES = -I/usr/include $(if $(wildcard $(ARCH_INC)),-I$(ARCH_INC),)
 
 # Directories
 EBPF_DIR = ebpf

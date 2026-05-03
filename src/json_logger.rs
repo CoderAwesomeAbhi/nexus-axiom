@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use serde::Serialize;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -79,7 +80,10 @@ impl JsonLogger {
                 if file.is_some() {
                     log::info!("📝 JSON logging enabled: {}", p);
                 } else {
-                    log::warn!("⚠️  Could not open JSON log file: {}, falling back to stdout", p);
+                    log::warn!(
+                        "⚠️  Could not open JSON log file: {}, falling back to stdout",
+                        p
+                    );
                 }
 
                 Self {
@@ -88,13 +92,11 @@ impl JsonLogger {
                     format,
                 }
             }
-            None => {
-                Self {
-                    file: None,
-                    stdout_mode: true,
-                    format,
-                }
-            }
+            None => Self {
+                file: None,
+                stdout_mode: true,
+                format,
+            },
         }
     }
 

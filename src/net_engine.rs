@@ -9,6 +9,12 @@ pub struct NetEngine {
     skel: Option<NexusNetSkel<'static>>,
 }
 
+impl Default for NetEngine {
+    fn default() -> Self {
+        Self::new().expect("NetEngine::default failed")
+    }
+}
+
 impl NetEngine {
     pub fn new() -> Result<Self> {
         Ok(Self { skel: None })

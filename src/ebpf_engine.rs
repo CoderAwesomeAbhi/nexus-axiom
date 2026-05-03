@@ -4,7 +4,9 @@ use libbpf_rs::RingBufferBuilder;
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 include!(concat!(env!("OUT_DIR"), "/nexus_working.skel.rs"));
@@ -32,7 +34,7 @@ struct Event {
 pub struct EbpfEngine {
     skel: Option<NexusWorkingSkel<'static>>,
     metrics: Arc<crate::metrics::MetricsServer>,
-    ai_analyst: crate::ai_analyst::AIAnalyst,
+    ai_analyst: Arc<crate::ai_analyst::AIAnalyst>,
 }
 
 impl EbpfEngine {
@@ -40,7 +42,7 @@ impl EbpfEngine {
         Ok(Self {
             skel: None,
             metrics,
-            ai_analyst: crate::ai_analyst::AIAnalyst::new(None),
+            ai_analyst: Arc::new(crate::ai_analyst::AIAnalyst::new(None)?),
         })
     }
 
@@ -62,13 +64,23 @@ impl EbpfEngine {
         let maps = skel.maps();
 
         let metrics = self.metrics.clone();
-        let ai_analyst = crate::ai_analyst::AIAnalyst::new(None);
+        let (event_tx, event_rx) = mpsc::channel::<Event>();
+        let ai_analyst = Arc::clone(&self.ai_analyst);
+
+        let worker = thread::spawn(move || {
+            while let Ok(event) = event_rx.recv() {
+                handle_event(&event, ai_analyst.as_ref());
+            }
+        });
+
+        let callback_tx = event_tx.clone();
 
         builder.add(maps.events(), move |data: &[u8]| {
             if data.len() < std::mem::size_of::<Event>() {
                 return 0;
             }
-            let event = unsafe { &*(data.as_ptr() as *const Event) };
+            // Ringbuffer records are byte slices; read unaligned into an owned Event.
+            let event = unsafe { std::ptr::read_unaligned(data.as_ptr() as *const Event) };
 
             metrics.total_events.fetch_add(1, Ordering::Relaxed);
 
@@ -86,7 +98,7 @@ impl EbpfEngine {
                 }
             }
 
-            handle_event(event, &ai_analyst);
+            let _ = callback_tx.send(event);
             0
         })?;
 
@@ -97,6 +109,10 @@ impl EbpfEngine {
         while running.load(Ordering::SeqCst) {
             ringbuf.poll(Duration::from_millis(100))?;
         }
+
+        drop(ringbuf);
+        drop(event_tx);
+        let _ = worker.join();
 
         Ok(())
     }
@@ -122,23 +138,22 @@ fn handle_event(event: &Event, ai_analyst: &crate::ai_analyst::AIAnalyst) {
         println!("  prot=0x{:02x}  flags=0x{:02x}", event.prot, event.flags);
         println!("  Status    : ✅ BLOCKED AT KERNEL LEVEL");
 
-        if let Ok(analysis) = ai_analyst.analyze_threat(
-            event.pid,
-            &comm,
-            "W^X Memory Violation",
-        ) {
-            println!("\n  🤖 AI Analysis: {}", analysis);
+        match ai_analyst.analyze_threat(event.pid, &comm, "W^X Memory Violation") {
+            Ok(analysis) => println!("\n  🤖 AI Analysis: {}", analysis),
+            Err(err) => log::warn!("AI analysis unavailable: {}", err),
         }
 
         match kill_process(event.pid) {
             Ok(_) => println!("  Action    : 💀 PROCESS TERMINATED"),
-            Err(e) => println!("  Action    : ⚠️  Kill failed: {} (kernel block sufficient)", e),
+            Err(e) => println!(
+                "  Action    : ⚠️  Kill failed: {} (kernel block sufficient)",
+                e
+            ),
         }
         println!("{}", "═".repeat(70));
     }
 }
 
 fn kill_process(pid: u32) -> Result<()> {
-    signal::kill(Pid::from_raw(pid as i32), Signal::SIGKILL)
-        .context("Failed to send SIGKILL")
+    signal::kill(Pid::from_raw(pid as i32), Signal::SIGKILL).context("Failed to send SIGKILL")
 }

@@ -16,6 +16,12 @@ pub struct MetricsServer {
     pub start_time: Instant,
 }
 
+impl Default for MetricsServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MetricsServer {
     pub fn new() -> Self {
         Self {
@@ -53,7 +59,7 @@ impl MetricsServer {
                 match stream {
                     Ok(mut stream) => {
                         let mut buffer = [0; 1024];
-                        if let Ok(_) = stream.read(&mut buffer) {
+                        if stream.read(&mut buffer).is_ok() {
                             let uptime = start.elapsed().as_secs();
                             let response = format!(
                                 "HTTP/1.1 200 OK\r\n\

@@ -12,15 +12,23 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev build-essential
-      
+          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev \
+            pkg-config build-essential
+
+      - name: Generate vmlinux.h
+        run: |
+          if [ -f /sys/kernel/btf/vmlinux ]; then
+            bpftool btf dump file /sys/kernel/btf/vmlinux format c > ebpf/vmlinux.h 2>/dev/null || true
+          fi
+          touch ebpf/vmlinux.h
+
       - name: Compile eBPF programs
         run: make ebpf
-      
+
       - name: Upload eBPF artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -30,33 +38,23 @@ jobs:
   build-rust:
     name: Build Rust Userspace
     runs-on: ubuntu-22.04
-    needs: build-ebpf
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev
-      
-      - name: Download eBPF artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: ebpf-programs
-          path: target/bpf/
-      
+          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config
+
       - name: Build Rust
         run: cargo build --release
-      
+
       - name: Run tests
         run: cargo test
-      
+
       - name: Upload binary
         uses: actions/upload-artifact@v3
         with:
@@ -68,17 +66,20 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
           components: rustfmt, clippy
-          override: true
-      
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config
+
       - name: Check formatting
         run: cargo fmt -- --check
-      
+
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
@@ -87,13 +88,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Run cargo audit
         run: |
           cargo install cargo-audit

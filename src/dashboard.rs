@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::sync::Arc;
@@ -26,10 +27,8 @@ impl Dashboard {
                     let mut buffer = [0; 1024];
                     if stream.read(&mut buffer).is_ok() {
                         let html = Self::generate_html(&metrics);
-                        let response = format!(
-                            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}",
-                            html
-                        );
+                        let response =
+                            format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}", html);
                         let _ = stream.write_all(response.as_bytes());
                     }
                 }

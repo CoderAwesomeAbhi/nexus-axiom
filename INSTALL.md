@@ -16,6 +16,11 @@ sudo apt-get install -y \
     clang \
     llvm \
     libbpf-dev \
+    libelf-dev \
+    zlib1g-dev \
+    pkg-config \
+    bpftool \
+    jq \
     linux-headers-$(uname -r) \
     build-essential
 

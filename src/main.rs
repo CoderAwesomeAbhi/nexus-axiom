@@ -1,6 +1,5 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "linux")]
 pub mod ai_analyst;
@@ -56,10 +55,12 @@ fn main() -> Result<()> {
 
 #[cfg(target_os = "linux")]
 fn start_protection(audit_mode: bool) -> Result<()> {
+    use anyhow::Context;
     use ebpf_engine::EbpfEngine;
     use metrics::MetricsServer;
     use net_engine::NetEngine;
     use seccomp_engine::SeccompEngine;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
     println!("\n🛡️  NEXUS AXIOM v1.0.0");
@@ -134,6 +135,7 @@ fn monitor_events() -> Result<()> {
     {
         use ebpf_engine::EbpfEngine;
         use metrics::MetricsServer;
+        use std::sync::atomic::AtomicBool;
         use std::sync::Arc;
 
         let metrics = Arc::new(MetricsServer::new());
@@ -141,12 +143,13 @@ fn monitor_events() -> Result<()> {
         engine.load_and_attach()?;
         let running = Arc::new(AtomicBool::new(true));
         engine.process_events(running)?;
+        return Ok(());
     }
 
     #[cfg(not(target_os = "linux"))]
-    anyhow::bail!("Only available on Linux");
-
-    Ok(())
+    {
+        anyhow::bail!("Only available on Linux");
+    }
 }
 
 fn show_status() -> Result<()> {
