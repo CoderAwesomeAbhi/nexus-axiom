@@ -7,42 +7,39 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    
+    name: Create Release
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang llvm libbpf-dev linux-headers-generic
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Build release
-      run: cargo build --release
-    
-    - name: Create tarball
-      run: |
-        tar -czf nexus-axiom-${{ github.ref_name }}-x86_64-linux.tar.gz \
-          -C target/release nexus-axiom \
-          -C ../../ README.md LICENSE
-    
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: nexus-axiom-*.tar.gz
-        body: |
-          ## Nexus Axiom ${{ github.ref_name }}
-          
-          ### Installation
-          ```bash
-          tar -xzf nexus-axiom-${{ github.ref_name }}-x86_64-linux.tar.gz
-          sudo ./nexus-axiom start
-          ```
-          
-          ### What's New
-          See [CHANGELOG.md](CHANGELOG.md) for details.
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libbpf-dev build-essential
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      
+      - name: Build release
+        run: |
+          make ebpf
+          cargo build --release
+      
+      - name: Create tarball
+        run: |
+          mkdir -p nexus-axiom-${{ github.ref_name }}
+          cp target/release/nexus-axiom nexus-axiom-${{ github.ref_name }}/
+          cp target/bpf/*.o nexus-axiom-${{ github.ref_name }}/
+          cp README.md LICENSE nexus-axiom-${{ github.ref_name }}/
+          tar czf nexus-axiom-${{ github.ref_name }}-linux-x86_64.tar.gz nexus-axiom-${{ github.ref_name }}
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nexus-axiom-${{ github.ref_name }}-linux-x86_64.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

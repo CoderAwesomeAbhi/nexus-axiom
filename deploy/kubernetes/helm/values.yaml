@@ -1,0 +1,42 @@
+image:
+  repository: nexus-axiom
+  tag: latest
+  pullPolicy: Always
+
+mode: enforce  # or "audit"
+
+metrics:
+  enabled: true
+  port: 9090
+
+dashboard:
+  enabled: true
+  port: 8080
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+securityPolicy:
+  blockWX: true
+  blockMprotect: true
+  blockPtrace: true
+  
+  protectedPaths:
+    - "/etc/passwd"
+    - "/etc/shadow"
+    - "/boot/*"
+  
+  networkPolicy:
+    blockedPorts: []
+    rateLimitPPS: 1000
+
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+  - effect: NoExecute
+    operator: Exists

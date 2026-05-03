@@ -5,7 +5,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "linux")]
 pub mod ai_analyst;
 #[cfg(target_os = "linux")]
+pub mod dashboard;
+#[cfg(target_os = "linux")]
 mod ebpf_engine;
+#[cfg(target_os = "linux")]
+pub mod fs_protection;
+#[cfg(target_os = "linux")]
+pub mod json_logger;
 #[cfg(target_os = "linux")]
 pub mod metrics;
 #[cfg(target_os = "linux")]

@@ -1,0 +1,26 @@
+apiVersion: nexus-axiom.io/v1
+kind: SecurityPolicy
+metadata:
+  name: default-security-policy
+  namespace: default
+spec:
+  mode: enforce
+  blockWX: true
+  blockMprotect: true
+  blockPtrace: true
+  
+  allowlist:
+  - process: "node"
+    namespace: "default"
+  - process: "python3"
+    namespace: "default"
+  
+  protectedPaths:
+  - "/etc/passwd"
+  - "/etc/shadow"
+  - "/boot/*"
+  - "/usr/bin/sudo"
+  
+  networkPolicy:
+    blockedPorts: [22, 23, 3389]  # SSH, Telnet, RDP
+    rateLimitPPS: 1000
