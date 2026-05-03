@@ -1,4 +1,4 @@
-.PHONY: all clean ebpf rust install test
+.PHONY: all clean ebpf rust install test run
 
 CLANG ?= clang
 CARGO ?= cargo
@@ -18,9 +18,9 @@ ebpf:
 	@echo "🔧 Compiling eBPF LSM program..."
 	@mkdir -p $(BUILD_DIR)/bpf
 	$(CLANG) $(BPF_CFLAGS) $(BPF_INCLUDES) \
-		-c $(EBPF_DIR)/nexus_real.bpf.c \
-		-o $(BUILD_DIR)/bpf/nexus_real.bpf.o
-	@echo "✅ eBPF LSM compiled: $(BUILD_DIR)/bpf/nexus_real.bpf.o"
+		-c $(EBPF_DIR)/nexus_working.bpf.c \
+		-o $(BUILD_DIR)/bpf/nexus_working.bpf.o
+	@echo "✅ eBPF LSM compiled: $(BUILD_DIR)/bpf/nexus_working.bpf.o"
 	@echo "🔧 Compiling eBPF XDP program..."
 	$(CLANG) $(BPF_CFLAGS) $(BPF_INCLUDES) \
 		-c $(EBPF_DIR)/nexus_net.bpf.c \
@@ -38,8 +38,13 @@ install: all
 	@echo "📦 Installing Nexus Axiom..."
 	sudo cp target/release/nexus-axiom /usr/local/bin/
 	sudo mkdir -p /usr/lib/nexus-axiom
-	sudo cp $(BUILD_DIR)/bpf/nexus_real.bpf.o /usr/lib/nexus-axiom/
+	sudo cp $(BUILD_DIR)/bpf/nexus_working.bpf.o /usr/lib/nexus-axiom/
 	@echo "✅ Installed to /usr/local/bin/nexus-axiom"
+
+# End-to-end: compile + load + test (requires root)
+run:
+	@echo "🚀 Running full integration test..."
+	sudo bash run.sh
 
 # Run tests
 test: all
