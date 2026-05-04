@@ -79,6 +79,10 @@ fn start_protection(audit_mode: bool) -> Result<()> {
     // 2. Start Metrics Server
     let metrics = Arc::new(MetricsServer::new());
     metrics.start(9090);
+    
+    // 3. Start Dashboard
+    let dashboard = dashboard::Dashboard::new(metrics.clone());
+    dashboard.start(8080);
 
     let mut engine = EbpfEngine::new(metrics.clone())?;
     let mut net_engine = NetEngine::new()?;
