@@ -91,18 +91,23 @@ success "Repository ready"
 info "Compiling Nexus Axiom (this may take 2-3 minutes)..."
 source "$HOME/.cargo/env"
 cargo build --release --quiet 2>&1 | grep -v "warning:" || true
-success "Compilation complete"
+success "Compilation complete (eBPF embedded in binary)"
 
-# Compile eBPF
-info "Compiling eBPF programs..."
-clang -O2 -g -target bpf -c ebpf/nexus_working.bpf.c -o /tmp/nexus_axiom.o
-success "eBPF compiled"
+# Create config
+info "Creating configuration..."
+mkdir -p /etc/nexus-axiom
+if [[ -f "$INSTALL_DIR/config.toml" ]]; then
+    cp "$INSTALL_DIR/config.toml" /etc/nexus-axiom/config.toml
+    success "Configuration created at /etc/nexus-axiom/config.toml"
+else
+    warn "config.toml not found, using defaults"
+fi
 
-# Load eBPF
-info "Loading eBPF LSM hooks..."
-rm -f /sys/fs/bpf/nexus_axiom 2>/dev/null || true
-bpftool prog load /tmp/nexus_axiom.o /sys/fs/bpf/nexus_axiom autoattach
-success "eBPF loaded and attached"
+# Create log directory
+info "Creating log directory..."
+mkdir -p /var/log/nexus-axiom
+chmod 755 /var/log/nexus-axiom
+success "Log directory created at /var/log/nexus-axiom"
 
 # Create systemd service
 info "Creating systemd service..."
@@ -113,8 +118,6 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStartPre=/usr/bin/clang -O2 -g -target bpf -c /opt/nexus-axiom/ebpf/nexus_working.bpf.c -o /tmp/nexus_axiom.o
-ExecStartPre=/usr/sbin/bpftool prog load /tmp/nexus_axiom.o /sys/fs/bpf/nexus_axiom autoattach
 ExecStart=/opt/nexus-axiom/target/release/nexus-axiom start
 Restart=always
 RestartSec=10

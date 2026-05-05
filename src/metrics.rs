@@ -10,6 +10,7 @@ pub struct MetricsServer {
     pub total_events: Arc<AtomicU64>,
     pub mmap_events: Arc<AtomicU64>,
     pub mprotect_events: Arc<AtomicU64>,
+    pub ptrace_events: Arc<AtomicU64>,
     pub exec_events: Arc<AtomicU64>,
     pub file_events: Arc<AtomicU64>,
     pub network_drops: Arc<AtomicU64>,
@@ -29,6 +30,7 @@ impl MetricsServer {
             total_events: Arc::new(AtomicU64::new(0)),
             mmap_events: Arc::new(AtomicU64::new(0)),
             mprotect_events: Arc::new(AtomicU64::new(0)),
+            ptrace_events: Arc::new(AtomicU64::new(0)),
             exec_events: Arc::new(AtomicU64::new(0)),
             file_events: Arc::new(AtomicU64::new(0)),
             network_drops: Arc::new(AtomicU64::new(0)),
@@ -41,6 +43,7 @@ impl MetricsServer {
         let total = self.total_events.clone();
         let mmap = self.mmap_events.clone();
         let mprotect = self.mprotect_events.clone();
+        let ptrace = self.ptrace_events.clone();
         let exec = self.exec_events.clone();
         let file = self.file_events.clone();
         let network = self.network_drops.clone();
@@ -89,6 +92,10 @@ impl MetricsServer {
                                     # TYPE nexus_axiom_mprotect_events counter\n\
                                     nexus_axiom_mprotect_events {}\n\
                                     \n\
+                                    # HELP nexus_axiom_ptrace_events Ptrace debugging attempts\n\
+                                    # TYPE nexus_axiom_ptrace_events counter\n\
+                                    nexus_axiom_ptrace_events {}\n\
+                                    \n\
                                     # HELP nexus_axiom_exec_events Execution control events\n\
                                     # TYPE nexus_axiom_exec_events counter\n\
                                     nexus_axiom_exec_events {}\n\
@@ -108,6 +115,7 @@ impl MetricsServer {
                                     blocked.load(Ordering::Relaxed),
                                     mmap.load(Ordering::Relaxed),
                                     mprotect.load(Ordering::Relaxed),
+                                    ptrace.load(Ordering::Relaxed),
                                     exec.load(Ordering::Relaxed),
                                     file.load(Ordering::Relaxed),
                                     network.load(Ordering::Relaxed),

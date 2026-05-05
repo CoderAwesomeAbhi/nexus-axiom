@@ -72,6 +72,13 @@ impl JsonLogger {
     pub fn new(path: Option<&str>, format: LogFormat) -> Self {
         match path {
             Some(p) => {
+                // Create parent directory if it doesn't exist
+                if let Some(parent) = std::path::Path::new(p).parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        log::warn!("⚠️  Failed to create log directory: {}", e);
+                    }
+                }
+                
                 let file = OpenOptions::new()
                     .create(true)
                     .append(true)
@@ -176,5 +183,44 @@ impl Clone for JsonEvent {
             cgroup_id: self.cgroup_id,
             details: self.details.clone(),
         }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_json_event_creation() {
+        let event = JsonEvent {
+            timestamp: "2026-05-05T00:00:00Z".to_string(),
+            event_type: "mmap".to_string(),
+            pid: 1234,
+            uid: 0,
+            comm: "exploit".to_string(),
+            action: "blocked".to_string(),
+            blocked: true,
+            cgroup_id: 12345,
+            details: Some("test".to_string()),
+        };
+        
+        assert_eq!(event.pid, 1234);
+        assert_eq!(event.event_type, "mmap");
+        assert!(event.blocked);
+    }
+
+    #[test]
+    fn test_json_logger_stdout() {
+        let logger = JsonLogger::new(None, LogFormat::Standard);
+        assert!(logger.stdout_mode);
+    }
+
+    #[test]
+    fn test_log_format_clone() {
+        let format = LogFormat::Standard;
+        let format2 = format.clone();
+        assert!(matches!(format2, LogFormat::Standard));
     }
 }

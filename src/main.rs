@@ -17,11 +17,14 @@ pub mod net_engine;
 pub mod seccomp_engine;
 #[cfg(target_os = "linux")]
 pub mod ai_analyst;
+#[cfg(target_os = "linux")]
+pub mod config;
 
 #[derive(Parser)]
 #[command(name = "nexus-axiom")]
-#[command(version = "1.0.0")]
-#[command(about = "🛡️ Nexus Axiom - Real eBPF Security That Kills Exploits")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
+#[command(about = "🛡️ Nexus Axiom - eBPF Security That Actually Blocks Exploits")]
+#[command(arg_required_else_help = false)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -29,15 +32,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start real-time protection (requires root)
+    /// Start real-time protection (requires root). Loads eBPF hooks and monitors for exploits.
     Start {
-        /// Audit mode (log only, don't block)
+        /// Audit mode: log security events without blocking or killing processes
         #[arg(long)]
         audit: bool,
     },
-    /// Monitor security events
+    /// Monitor security events in real-time without starting full protection
     Monitor,
-    /// Show system status
+    /// Show system status and active protections
     Status,
 }
 
@@ -54,7 +57,7 @@ fn main() -> Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn start_protection(audit_mode: bool) -> Result<()> {
+fn start_protection(audit: bool) -> Result<()> {
     use anyhow::Context;
     use ebpf_engine::EbpfEngine;
     use fs_protection::FsProtection;
@@ -64,9 +67,23 @@ fn start_protection(audit_mode: bool) -> Result<()> {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
 
-    println!("\n🛡️  NEXUS AXIOM v1.0.0");
+    println!("\n🛡️  NEXUS AXIOM v{}", env!("CARGO_PKG_VERSION"));
     println!("{}", "=".repeat(70));
     println!("🟢 Starting Real-Time Protection...\n");
+
+    // Load config
+    let config = config::Config::load().unwrap_or_else(|e| {
+        log::warn!("⚠️  Failed to load config.toml: {}", e);
+        log::warn!("   Using default configuration...");
+        config::Config::default()
+    });
+
+    // Override audit mode if specified in CLI
+    let audit_mode = if audit { true } else { config.security.mode == "audit" };
+    
+    if audit_mode {
+        println!("📋 Running in AUDIT MODE (logging only, no blocking)\n");
+    }
 
     // Check root
     if !nix::unistd::Uid::effective().is_root() {
@@ -78,24 +95,24 @@ fn start_protection(audit_mode: bool) -> Result<()> {
     seccomp.apply_strict_profile()?;
 
     // 2. Initialize Filesystem Protection
-    let _fs_protection = FsProtection::new();
+    let mut fs_protection = FsProtection::new();
     log::info!("🛡️  Filesystem protection initialized");
 
     // 3. Start Metrics Server
     let metrics = Arc::new(MetricsServer::new());
-    if let Err(e) = metrics.start(9090) {
+    if let Err(e) = metrics.start(config.server.metrics_port) {
         log::warn!("⚠️  Metrics server failed to start: {}", e);
         log::warn!("   Continuing without metrics endpoint...");
     }
     
-    // 3. Start Dashboard
+    // 4. Start Dashboard
     let dashboard = dashboard::Dashboard::new(metrics.clone());
-    if let Err(e) = dashboard.start(8080) {
+    if let Err(e) = dashboard.start(config.server.dashboard_port) {
         log::warn!("⚠️  Dashboard failed to start: {}", e);
         log::warn!("   Continuing without dashboard...");
     }
 
-    let mut engine = EbpfEngine::new(metrics.clone())?;
+    let mut engine = EbpfEngine::new(metrics.clone(), audit_mode)?;
     let mut net_engine = NetEngine::new()?;
 
     // Load and attach eBPF programs
@@ -132,14 +149,14 @@ fn start_protection(audit_mode: bool) -> Result<()> {
     })?;
 
     // Process events
-    engine.process_events(running)?;
+    engine.process_events(running, &mut fs_protection)?;
 
     println!("\n✅ Nexus Axiom stopped");
     Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]
-fn start_protection(_audit_mode: bool) -> Result<()> {
+fn start_protection(_audit: bool) -> Result<()> {
     anyhow::bail!("Nexus Axiom only runs on Linux");
 }
 
@@ -149,15 +166,17 @@ fn monitor_events() -> Result<()> {
     #[cfg(target_os = "linux")]
     {
         use ebpf_engine::EbpfEngine;
+        use fs_protection::FsProtection;
         use metrics::MetricsServer;
         use std::sync::atomic::AtomicBool;
         use std::sync::Arc;
 
         let metrics = Arc::new(MetricsServer::new());
-        let mut engine = EbpfEngine::new(metrics)?;
+        let mut engine = EbpfEngine::new(metrics, false)?;
         engine.load_and_attach()?;
         let running = Arc::new(AtomicBool::new(true));
-        engine.process_events(running)?;
+        let mut fs_protection = FsProtection::new();
+        engine.process_events(running, &mut fs_protection)?;
         return Ok(());
     }
 

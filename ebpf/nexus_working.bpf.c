@@ -91,7 +91,7 @@ int mprotect_hook(void *ctx)
 }
 
 
-// LSM hook: ptrace_access_check - Block unauthorized debugging
+// LSM hook: ptrace_access_check - Monitor debugging attempts
 SEC("lsm/ptrace_access_check")
 int ptrace_hook(void *ctx)
 {
@@ -102,13 +102,13 @@ int ptrace_hook(void *ctx)
         e->timestamp = bpf_ktime_get_ns();
         e->prot = 0;
         e->flags = 0;
-        e->blocked = 1;
+        e->blocked = 0; // Changed to 0 - just monitor, don't block
         e->event_type = 5; // EVENT_TYPE_PTRACE
         e->cgroup_id = bpf_get_current_cgroup_id();
         bpf_get_current_comm(&e->comm, sizeof(e->comm));
         bpf_ringbuf_submit(e, 0);
     }
-    return -EPERM;
+    return 0; // Allow ptrace (gdb, strace, etc.)
 }
 
 // LSM hook: bprm_check_security - Monitor process execution
