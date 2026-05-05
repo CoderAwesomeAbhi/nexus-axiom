@@ -15,36 +15,28 @@ NC='\033[0m'
 # Check if Nexus Axiom is running
 if ! pgrep -x "nexus-axiom" > /dev/null; then
     echo "⚠️  Nexus Axiom is not running. Starting it..."
-    sudo ./target/release/nexus-axiom start > /dev/null 2>&1 &
-    sleep 3
+    if [ -f ../target/release/nexus-axiom ]; then
+        sudo ../target/release/nexus-axiom start > /dev/null 2>&1 &
+        sleep 3
+    else
+        echo "❌ Nexus Axiom binary not found. Run: cargo build --release"
+        exit 1
+    fi
 fi
 
-echo "📊 Benchmark 1: CPU Overhead"
+echo "📊 Benchmark 1: Memory Usage"
 echo "─────────────────────────────"
-echo "Running 10,000 syscalls..."
-
-# Baseline (no protection)
-echo -n "Baseline (no eBPF): "
-time_baseline=$(bash -c 'time for i in {1..10000}; do /bin/true; done' 2>&1 | grep real | awk '{print $2}')
-echo "$time_baseline"
-
-# With Nexus Axiom
-echo -n "With Nexus Axiom: "
-time_protected=$(bash -c 'time for i in {1..10000}; do /bin/true; done' 2>&1 | grep real | awk '{print $2}')
-echo "$time_protected"
-
-echo -e "${GREEN}✓ Overhead: <1%${NC}"
+mem_kb=$(ps aux | grep nexus-axiom | grep -v grep | awk '{print $6}' | head -1)
+if [ -n "$mem_kb" ]; then
+    mem_mb=$((mem_kb / 1024))
+    echo "RSS Memory: ${mem_mb} MB"
+    echo -e "${GREEN}✓ Memory usage: ${mem_mb} MB${NC}"
+else
+    echo "⚠️  Could not measure memory (process not found)"
+fi
 echo ""
 
-echo "📊 Benchmark 2: Memory Usage"
-echo "─────────────────────────────"
-mem_kb=$(ps aux | grep nexus-axiom | grep -v grep | awk '{print $6}')
-mem_mb=$((mem_kb / 1024))
-echo "RSS Memory: ${mem_mb} MB"
-echo -e "${GREEN}✓ Memory usage: ${mem_mb} MB${NC}"
-echo ""
-
-echo "📊 Benchmark 3: Event Processing Latency"
+echo "📊 Benchmark 2: Event Processing Latency"
 echo "─────────────────────────────────────────"
 
 # Create latency test
@@ -79,53 +71,51 @@ int main() {
 EOF
 
 gcc /tmp/bench_latency.c -o /tmp/bench_latency 2>/dev/null
-/tmp/bench_latency
-echo -e "${GREEN}✓ Latency: 2-5 microseconds per syscall${NC}"
-rm /tmp/bench_latency /tmp/bench_latency.c
+if [ -f /tmp/bench_latency ]; then
+    /tmp/bench_latency
+    rm /tmp/bench_latency /tmp/bench_latency.c
+else
+    echo "⚠️  Could not compile benchmark"
+fi
 echo ""
 
-echo "📊 Benchmark 4: Throughput"
+echo "📊 Benchmark 3: Event Throughput"
 echo "───────────────────────────"
 echo "Testing event processing throughput..."
 
 # Get current event count
 before=$(curl -s http://localhost:9090/metrics 2>/dev/null | grep "nexus_axiom_events_total" | awk '{print $2}')
 
-# Generate load
-for i in {1..1000}; do
-    /bin/true &
-done
-wait
-
-sleep 1
-
-# Get new event count
-after=$(curl -s http://localhost:9090/metrics 2>/dev/null | grep "nexus_axiom_events_total" | awk '{print $2}')
-
-events=$((after - before))
-echo "Processed $events events in 1 second"
-echo -e "${GREEN}✓ Throughput: 1M+ events/second capable${NC}"
-echo ""
-
-echo "📊 Benchmark 5: Resource Comparison"
-echo "────────────────────────────────────"
-echo "Nexus Axiom vs Falco:"
-echo ""
-echo "                 Nexus Axiom    Falco"
-echo "CPU Overhead:    <1%            3-5%"
-echo "Memory (RSS):    ${mem_mb} MB          150-200 MB"
-echo "Latency:         2-5 μs         10-20 μs"
-echo "Can Block:       ✅             ❌"
+if [ -n "$before" ]; then
+    # Generate load
+    for i in {1..1000}; do
+        /bin/true &
+    done
+    wait
+    
+    sleep 1
+    
+    # Get new event count
+    after=$(curl -s http://localhost:9090/metrics 2>/dev/null | grep "nexus_axiom_events_total" | awk '{print $2}')
+    
+    events=$((after - before))
+    echo "Processed $events events in 1 second"
+    echo -e "${GREEN}✓ Throughput: ${events} events/second${NC}"
+else
+    echo "⚠️  Metrics endpoint not available"
+    echo "   Make sure Nexus Axiom is running with metrics enabled"
+fi
 echo ""
 
 echo "======================================"
 echo "📈 SUMMARY"
 echo "======================================"
-echo -e "${GREEN}✓ CPU Overhead: <1%${NC}"
-echo -e "${GREEN}✓ Memory Usage: ${mem_mb} MB${NC}"
-echo -e "${GREEN}✓ Latency: 2-5 microseconds${NC}"
-echo -e "${GREEN}✓ Throughput: 1M+ events/sec${NC}"
-echo -e "${GREEN}✓ 10x faster than Falco${NC}"
-echo -e "${GREEN}✓ 5x less memory than Falco${NC}"
+echo ""
+echo "These are MEASURED results from actual system calls."
+echo "Performance varies based on:"
+echo "  • Kernel version"
+echo "  • System load"
+echo "  • CPU architecture"
+echo "  • Number of active eBPF hooks"
 echo ""
 echo "Benchmarked on: $(uname -r), $(nproc) cores, $(free -h | grep Mem | awk '{print $2}') RAM"

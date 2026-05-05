@@ -3,6 +3,8 @@ use anyhow::Result;
 /// SeccompEngine applies a strict seccomp-bpf filter to the Nexus Axiom daemon itself.
 /// This prevents an attacker who somehow compromises the userspace daemon from
 /// executing arbitrary system calls (defense-in-depth).
+///
+/// ⚠️ CURRENT STATUS: STUB ONLY - Not enforced in this version
 pub struct SeccompEngine {
     enabled: bool,
 }
@@ -23,9 +25,10 @@ impl SeccompEngine {
     }
 
     pub fn apply_strict_profile(&mut self) -> Result<()> {
-        log::info!("🔒 Applying strict Seccomp-BPF profile to Nexus Axiom daemon...");
+        log::warn!("🔒 Seccomp: STUB ONLY (not enforced)");
+        log::warn!("   Daemon has full syscall access - TODO: implement actual filtering");
 
-        // In a full production scenario, we would use the `seccomp` or `libseccomp` crate
+        // NOTE: This is currently a stub. In production, use the `seccomp` crate
         // to build a BPF filter that only allows:
         // - read/write (for ringbuffer and logs)
         // - epoll/poll (for event loop)
@@ -33,9 +36,8 @@ impl SeccompEngine {
         // - exit/exit_group
         // And strictly blocks execve, ptrace, and network sockets.
 
-        // For this milestone, we log the enforcement.
-        self.enabled = true;
-        log::info!("✅ Seccomp profile applied. Daemon is now isolated.");
+        self.enabled = false; // Honest: not actually enabled
+        log::warn!("⚠️  Seccomp NOT enforced");
 
         Ok(())
     }

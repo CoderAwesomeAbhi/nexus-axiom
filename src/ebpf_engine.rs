@@ -254,7 +254,7 @@ fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Opt
 
         // AI Analysis
         if let Some(analyst) = ai_analyst {
-            if let Ok(analysis) = analyst.analyze_threat(&comm, event.pid) {
+            if let Ok(analysis) = analyst.analyze_threat(event.pid, &comm, "W^X violation") {
                 println!("  AI Analysis: {}", analysis);
             }
         }
