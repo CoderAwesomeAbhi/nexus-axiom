@@ -12,6 +12,8 @@
 [![eBPF](https://img.shields.io/badge/eBPF-LSM%20%2B%20XDP-purple.svg?style=for-the-badge)](https://ebpf.io)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-DaemonSet-326CE5.svg?style=for-the-badge)](https://kubernetes.io)
 [![Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge&color=yellow)](https://github.com/CoderAwesomeAbhi/nexus-axiom/stargazers)
+[![CI](https://img.shields.io/github/actions/workflow/status/CoderAwesomeAbhi/nexus-axiom/ci.yml?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/actions)
+[![Issues](https://img.shields.io/github/issues/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
 
 > **Most security tools watch attacks happen. Nexus Axiom terminates them.**
 

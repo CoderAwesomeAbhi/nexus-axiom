@@ -1,0 +1,48 @@
+name: Bug Report
+description: Report a bug in Nexus Axiom
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below.
+  
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened?
+      placeholder: Nexus Axiom crashed when...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Start nexus-axiom
+        2. Run exploit
+        3. See error
+    validations:
+      required: true
+  
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: System information
+      placeholder: |
+        - OS: Ubuntu 22.04
+        - Kernel: 5.15.0-91
+        - Nexus Axiom version: 1.0.0
+    validations:
+      required: true
+  
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant logs from journalctl
+      placeholder: Paste logs here
