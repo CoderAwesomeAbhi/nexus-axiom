@@ -94,11 +94,7 @@ fn start_protection(audit: bool) -> Result<()> {
         anyhow::bail!("❌ Must run as root (sudo)");
     }
 
-    // 1. Apply seccomp FIRST (before spawning any threads)
-    let mut seccomp = SeccompEngine::new();
-    seccomp.apply_strict_profile()?;
-
-    // 2. Initialize Filesystem Protection
+    // 1. Initialize Filesystem Protection
     let mut fs_protection = FsProtection::new();
     if let Err(e) = fs_protection.start_monitoring() {
         log::warn!("⚠️  FS Protection failed to start: {}", e);
@@ -107,14 +103,14 @@ fn start_protection(audit: bool) -> Result<()> {
         log::info!("🛡️  Filesystem protection: Real-time monitoring active");
     }
 
-    // 3. Start Metrics Server
+    // 2. Start Metrics Server
     let metrics = Arc::new(MetricsServer::new());
     if let Err(e) = metrics.start(config.server.metrics_port) {
         log::warn!("⚠️  Metrics server failed to start: {}", e);
         log::warn!("   Continuing without metrics endpoint...");
     }
 
-    // 4. Start Dashboard
+    // 3. Start Dashboard
     let dashboard = dashboard::Dashboard::new(metrics.clone());
     if let Err(e) = dashboard.start(config.server.dashboard_port) {
         log::warn!("⚠️  Dashboard failed to start: {}", e);
@@ -133,7 +129,28 @@ fn start_protection(audit: bool) -> Result<()> {
         .load_and_attach()
         .context("Failed to load eBPF XDP programs")?;
 
+    // Apply network blocks from config
+    for ip_str in &config.network.blocked_ips {
+        if let Ok(ip) = ip_str.parse() {
+            if let Err(e) = net_engine.block_ip(ip) {
+                log::warn!("Failed to block IP {}: {}", ip_str, e);
+            } else {
+                log::info!("🚫 Blocked IP from config: {}", ip_str);
+            }
+        } else {
+            log::warn!("Invalid IP in config: {}", ip_str);
+        }
+    }
+
     println!("✅ eBPF hooks loaded");
+    
+    // 4. Apply seccomp LAST (after all servers/threads are running)
+    let mut seccomp = SeccompEngine::new();
+    if let Err(e) = seccomp.apply_strict_profile() {
+        log::warn!("⚠️  Seccomp failed to apply: {}", e);
+        log::warn!("   Continuing without seccomp isolation...");
+    }
+    
     println!(
         "✅ Mode: {}",
         if audit_mode {

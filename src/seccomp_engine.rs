@@ -32,18 +32,15 @@ impl SeccompEngine {
         let mut ctx = ScmpFilterContext::new_filter(ScmpAction::Allow)?;
 
         // Block dangerous syscalls that a security daemon should never need
+        // NOTE: We allow clone (for threads), and don't block existing sockets
         let blocked_syscalls = vec![
             "execve",   // No spawning processes
             "execveat", // No spawning processes
             "ptrace",   // No debugging other processes
             "fork",     // No forking
             "vfork",    // No forking
-            "clone",    // No cloning (except for threads)
-            "socket",   // No new network connections (we use existing ones)
-            "connect",  // No new connections
-            "accept",   // No accepting connections
-            "bind",     // No binding to ports (already bound)
-            "listen",   // No listening (already listening)
+            // clone is ALLOWED (needed for threads)
+            // socket/bind/listen are ALLOWED (servers already bound)
         ];
 
         for syscall_name in blocked_syscalls {

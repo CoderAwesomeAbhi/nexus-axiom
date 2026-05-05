@@ -7,91 +7,67 @@ on:
     branches: [ main ]
 
 jobs:
-  code-quality:
-    name: Code Quality Checks
+  formatting:
+    name: Code Formatting
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config libssl-dev libseccomp-dev linux-headers-$(uname -r)
-
+          components: rustfmt
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run clippy (check only, no build)
-        run: cargo clippy --all-targets --all-features --no-deps -- -D warnings || echo "⚠️  Clippy warnings (non-blocking)"
-
-  verify-structure:
-    name: Verify Project Structure
+  clippy:
+    name: Clippy Lints
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-
-      - name: Verify eBPF source files exist
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Install dependencies
         run: |
-          test -f ebpf/nexus_working.bpf.c || exit 1
-          test -f ebpf/nexus_net.bpf.c || exit 1
-          echo "✅ eBPF source files present"
+          sudo apt-get update
+          sudo apt-get install -y libbpf-dev libelf-dev libseccomp-dev pkg-config libssl-dev
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Verify Rust source structure
+  tests:
+    name: Unit Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
         run: |
-          test -f src/main.rs || exit 1
-          test -f src/ebpf_engine.rs || exit 1
-          test -f Cargo.toml || exit 1
-          echo "✅ Rust source structure valid"
+          sudo apt-get update
+          sudo apt-get install -y libbpf-dev libelf-dev libseccomp-dev pkg-config libssl-dev
+      - name: Run tests
+        run: cargo test --lib --bins
 
-      - name: Verify documentation
-        run: |
-          test -f README.md || exit 1
-          test -f LICENSE || exit 1
-          echo "✅ Documentation present"
-
-  security-audit:
+  security:
     name: Security Audit
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run security audit
+        run: cargo audit
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run cargo audit
-        run: |
-          cargo install cargo-audit
-          cargo audit || echo "⚠️  Security audit found issues (informational)"
-
-  build-check:
-    name: Build Check (Syntax Only)
+  structure:
+    name: Project Structure
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies
+      - name: Verify critical files
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config libssl-dev libseccomp-dev
-
-      - name: Check Rust syntax (no eBPF build)
-        run: |
-          # Just check if Rust code is syntactically valid
-          # Don't actually build because eBPF requires full kernel headers
-          cargo check --lib --bins --tests --benches --examples || echo "⚠️  Full build requires Linux with BPF support"
-          echo "✅ Syntax check complete"
-          echo ""
-          echo "NOTE: Full compilation requires:"
-          echo "  - Linux kernel 5.8+"
-          echo "  - Full BPF headers (linux-headers-generic)"
-          echo "  - lsm=bpf kernel parameter"
-          echo ""
-          echo "This is expected. Real builds happen on production Linux systems."
+          test -f ebpf/nexus_working.bpf.c
+          test -f ebpf/nexus_net.bpf.c
+          test -f src/main.rs
+          test -f Cargo.toml
+          test -f README.md
+          test -f LICENSE
+          echo "✅ All critical files present"
