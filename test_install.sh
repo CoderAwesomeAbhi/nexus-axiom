@@ -57,7 +57,7 @@ fi
 echo ""
 echo "Testing exploit blocking..."
 cd /opt/nexus-axiom/cve_tests
-if sudo ./test_pwnkit 2>&1 | grep -q "BLOCKED"; then
+if sudo ./pwnkit 2>&1 | grep -q "BLOCKED"; then
     echo "✅ Exploit blocking works"
 else
     echo "❌ Exploit blocking failed"

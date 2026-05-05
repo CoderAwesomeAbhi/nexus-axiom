@@ -176,11 +176,11 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 
 ## ⚠️ Feature Status
 
-**Nexus Axiom v1.0 - All core features production-ready:**
+**Nexus Axiom v1.0 - Core features implemented and tested:**
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| W^X Memory Blocking | ✅ **Production** | Tested with 12+ CVEs, battle-tested |
+| W^X Memory Blocking | ✅ **Implemented** | Tested with 12+ CVEs |
 | Dashboard & Metrics | ✅ **Production** | Fully functional, tested |
 | JSON Logging | ✅ **Production** | All formats working |
 | Kubernetes Support | ✅ **Production** | DaemonSet tested |
@@ -191,8 +191,8 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 | File System Protection | ✅ **Production** | Real-time inotify monitoring of critical files |
 
 **What this means:**
-- All core security features are production-ready and tested
-- W^X blocking is the primary defense (battle-tested with CVEs)
+- All core security features are implemented and tested
+- W^X blocking is the primary defense (tested with CVEs)
 - Observability features (dashboard, metrics, logs) are fully functional
 - AI analysis works without API key (rule-based) or with OpenAI
 - Seccomp provides real defense-in-depth for the daemon
@@ -200,7 +200,7 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 - FS protection uses inotify for real-time file monitoring
 - Performance benchmarks show actual measured latency
 
-**Honest assessment:** This is a production-ready v1.0. All features are implemented and tested. The core value proposition (blocking exploits that other tools can't) is real and proven.
+**Honest assessment:** This is v1.0 with core features implemented and tested. W^X blocking works (tested with 12+ CVEs). Other features are functional but need more real-world testing. See [LIMITATIONS.md](LIMITATIONS.md) for what it doesn't do.
 
 
 

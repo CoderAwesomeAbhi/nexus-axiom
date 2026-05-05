@@ -3,15 +3,11 @@ use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::MapFlags;
 use log;
 use std::net::Ipv4Addr;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 include!(concat!(env!("OUT_DIR"), "/nexus_net.skel.rs"));
 
 pub struct NetEngine {
     skel: Option<NexusNetSkel<'static>>,
-    blocked_packets: Arc<AtomicU64>,
-    total_packets: Arc<AtomicU64>,
 }
 
 impl Default for NetEngine {
@@ -22,11 +18,7 @@ impl Default for NetEngine {
 
 impl NetEngine {
     pub fn new() -> Result<Self> {
-        Ok(Self {
-            skel: None,
-            blocked_packets: Arc::new(AtomicU64::new(0)),
-            total_packets: Arc::new(AtomicU64::new(0)),
-        })
+        Ok(Self { skel: None })
     }
 
     pub fn load_and_attach(&mut self) -> Result<()> {
@@ -52,7 +44,6 @@ impl NetEngine {
 
         blocklist.update(&ip_bytes, &val.to_ne_bytes(), MapFlags::ANY)?;
         log::info!("🚫 Blocked IP: {}", ip);
-        // Note: blocked_packets stat is incremented when packets are actually dropped by XDP
         Ok(())
     }
 
@@ -106,14 +97,6 @@ impl NetEngine {
         Ok(blocked)
     }
 
-    /// Get statistics
-    pub fn get_stats(&self) -> (u64, u64) {
-        (
-            self.total_packets.load(Ordering::Relaxed),
-            self.blocked_packets.load(Ordering::Relaxed),
-        )
-    }
-
     /// Stress test: Block and unblock rapidly
     pub fn stress_test(&self, iterations: usize) -> Result<()> {
         log::info!("🔥 Starting XDP stress test ({} iterations)...", iterations);
@@ -159,13 +142,5 @@ mod tests {
     fn test_net_engine_creation() {
         let engine = NetEngine::new();
         assert!(engine.is_ok());
-    }
-
-    #[test]
-    fn test_stats() {
-        let engine = NetEngine::new().unwrap();
-        let (total, blocked) = engine.get_stats();
-        assert_eq!(total, 0);
-        assert_eq!(blocked, 0);
     }
 }

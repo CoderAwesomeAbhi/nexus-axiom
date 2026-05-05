@@ -238,7 +238,7 @@ else
 fi
 
 info "Testing PwnKit (CVE-2021-4034)..."
-if ./test_pwnkit 2>&1 | grep -q "BLOCKED"; then
+if ./pwnkit 2>&1 | grep -q "BLOCKED"; then
     pass "PwnKit blocked"
 else
     fail "PwnKit not blocked"

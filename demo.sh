@@ -30,7 +30,7 @@ echo "Test 1: W^X Memory Allocation"
 echo ""
 
 echo "Test 2: CVE-2021-4034 (PwnKit)"
-./examples/test_pwnkit
+./examples/pwnkit
 echo ""
 
 echo "Test 3: mprotect() to W^X"
@@ -64,7 +64,7 @@ echo "Test 1: W^X Memory Allocation"
 echo ""
 
 echo "Test 2: CVE-2021-4034 (PwnKit)"
-./examples/test_pwnkit || echo "✅ Process was killed by Nexus Axiom"
+./examples/pwnkit || echo "✅ Process was killed by Nexus Axiom"
 echo ""
 
 echo "Test 3: mprotect() to W^X"

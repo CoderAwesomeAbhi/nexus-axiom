@@ -30,7 +30,7 @@ echo ""
 echo "Test 1: PwnKit (CVE-2021-4034)"
 echo "------------------------------"
 cd cve_tests
-if sudo ./test_pwnkit 2>&1 | grep -q "BLOCKED"; then
+if sudo ./pwnkit 2>&1 | grep -q "BLOCKED"; then
     echo "✅ PwnKit BLOCKED"
 else
     echo "❌ PwnKit NOT BLOCKED"

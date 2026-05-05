@@ -90,7 +90,7 @@ Action    : 💀 PROCESS TERMINATED
 
 ## Known Limitations
 
-### What Works (Production-Ready)
+### What Works (Tested and Verified)
 ✅ W^X memory blocking (LSM hooks)  
 ✅ Dashboard & metrics  
 ✅ JSON logging  

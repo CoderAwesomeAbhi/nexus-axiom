@@ -138,7 +138,7 @@ info "Testing exploit blocking..."
 cd "$INSTALL_DIR/cve_tests"
 make clean > /dev/null 2>&1 || true
 make > /dev/null 2>&1
-if ./test_pwnkit 2>&1 | grep -q "BLOCKED"; then
+if ./pwnkit 2>&1 | grep -q "BLOCKED"; then
     success "Exploit blocking verified!"
 else
     warn "Test inconclusive - but installation complete"
@@ -165,7 +165,7 @@ echo ""
 echo -e "  ${GREEN}•${NC} Start protection:  ${YELLOW}sudo systemctl start nexus-axiom${NC}"
 echo -e "  ${GREEN}•${NC} Check status:      ${YELLOW}sudo systemctl status nexus-axiom${NC}"
 echo -e "  ${GREEN}•${NC} View logs:         ${YELLOW}sudo journalctl -u nexus-axiom -f${NC}"
-echo -e "  ${GREEN}•${NC} Test blocking:     ${YELLOW}cd /opt/nexus-axiom/cve_tests && ./test_pwnkit${NC}"
+echo -e "  ${GREEN}•${NC} Test blocking:     ${YELLOW}cd /opt/nexus-axiom/cve_tests && ./pwnkit${NC}"
 echo ""
 echo -e "${BLUE}Documentation:${NC} https://github.com/CoderAwesomeAbhi/nexus-axiom"
 echo ""

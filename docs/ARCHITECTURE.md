@@ -2,7 +2,7 @@
 
 ## Overview
 
-Nexus Axiom is a production-grade Linux security framework operating at Ring 0 via LSM (Linux Security Module) hooks and eBPF. It provides real-time threat detection and prevention with sub-5ms latency.
+Nexus Axiom is a Linux security framework operating at Ring 0 via LSM (Linux Security Module) hooks and eBPF. It provides real-time threat detection and prevention with sub-5ms latency.
 
 ## System Architecture
 
