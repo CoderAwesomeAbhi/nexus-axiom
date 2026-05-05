@@ -78,7 +78,7 @@ impl JsonLogger {
                         log::warn!("⚠️  Failed to create log directory: {}", e);
                     }
                 }
-                
+
                 let file = OpenOptions::new()
                     .create(true)
                     .append(true)
@@ -186,8 +186,6 @@ impl Clone for JsonEvent {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,7 +203,7 @@ mod tests {
             cgroup_id: 12345,
             details: Some("test".to_string()),
         };
-        
+
         assert_eq!(event.pid, 1234);
         assert_eq!(event.event_type, "mmap");
         assert!(event.blocked);

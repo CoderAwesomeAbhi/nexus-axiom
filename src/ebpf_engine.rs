@@ -5,8 +5,8 @@ use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{mpsc, Mutex};
 use std::sync::Arc;
+use std::sync::{mpsc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -58,7 +58,7 @@ impl EbpfEngine {
             Some("/var/log/nexus-axiom/events.json"),
             crate::json_logger::LogFormat::Standard,
         ));
-        
+
         Ok(Self {
             skel: None,
             metrics,
@@ -79,7 +79,11 @@ impl EbpfEngine {
         Ok(())
     }
 
-    pub fn process_events(&self, running: Arc<AtomicBool>, fs_protection: &mut crate::fs_protection::FsProtection) -> Result<()> {
+    pub fn process_events(
+        &self,
+        running: Arc<AtomicBool>,
+        fs_protection: &mut crate::fs_protection::FsProtection,
+    ) -> Result<()> {
         let skel = self.skel.as_ref().context("eBPF not loaded")?;
 
         let mut builder = RingBufferBuilder::new();
@@ -99,7 +103,7 @@ impl EbpfEngine {
         });
 
         let callback_tx = event_tx.clone();
-        
+
         // Rate limiting state
         let mut last_reset = Instant::now();
         let mut event_count = 0;
@@ -112,7 +116,7 @@ impl EbpfEngine {
                 event_count = 0;
                 last_reset = now;
             }
-            
+
             event_count += 1;
             if event_count > MAX_EVENTS_PER_SEC {
                 return 0; // Drop event
@@ -156,7 +160,7 @@ impl EbpfEngine {
         let result = (|| -> Result<()> {
             while running.load(Ordering::SeqCst) {
                 ringbuf.poll(Duration::from_millis(100))?;
-                
+
                 // Check FS integrity every 100 polls (~10 seconds)
                 check_counter += 1;
                 if check_counter >= 100 {
@@ -198,7 +202,9 @@ fn resolve_container(pid: u32, cgroup_id: u64) -> String {
                 .filter_map(|s| u64::from_str_radix(s, 16).ok())
                 .next();
             let name = cgroup_path.split('/').last().unwrap_or("").to_string();
-            if derived_id == Some(cgroup_id) || (!name.is_empty() && name != "." && cgroup_path != "/") {
+            if derived_id == Some(cgroup_id)
+                || (!name.is_empty() && name != "." && cgroup_path != "/")
+            {
                 if cgroup_path != "/" && !name.is_empty() {
                     found = name;
                     break;
@@ -222,13 +228,18 @@ fn resolve_container(pid: u32, cgroup_id: u64) -> String {
     result
 }
 
-fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Option<JsonLogger>, audit_mode: bool) {
+fn handle_event(
+    event: &Event,
+    ai_analyst: &Option<AIAnalyst>,
+    json_logger: &Option<JsonLogger>,
+    audit_mode: bool,
+) {
     let mut comm = String::from_utf8_lossy(&event.comm)
         .trim_end_matches('\0')
         .chars()
         .filter(|c| c.is_ascii_graphic() || c.is_ascii_whitespace())
         .collect::<String>();
-    
+
     if comm.is_empty() {
         comm = format!("<pid-{}>", event.pid);
     }
@@ -247,7 +258,10 @@ fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Opt
         println!("🚨 EXPLOIT ATTEMPT BLOCKED 🚨");
         println!("{}", "═".repeat(70));
         println!("  Process   : {} (PID: {})", comm, event.pid);
-        println!("  Container : {} (cgroup: {})", container_name, event.cgroup_id);
+        println!(
+            "  Container : {} (cgroup: {})",
+            container_name, event.cgroup_id
+        );
         println!("  Hook      : {}", event_label);
         println!("  prot=0x{:02x}  flags=0x{:02x}", event.prot, event.flags);
         println!("  Status    : ✅ BLOCKED AT KERNEL LEVEL");
@@ -270,7 +284,10 @@ fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Opt
                 action: "blocked".to_string(),
                 blocked: true,
                 cgroup_id: event.cgroup_id,
-                details: Some(format!("prot=0x{:02x} flags=0x{:02x}", event.prot, event.flags)),
+                details: Some(format!(
+                    "prot=0x{:02x} flags=0x{:02x}",
+                    event.prot, event.flags
+                )),
             };
             logger.log_event(&json_event);
         }
@@ -281,9 +298,15 @@ fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Opt
         } else {
             kill_process(event.pid)
         } {
-            Ok(_) => println!("  Action    : {} PROCESS {}", 
+            Ok(_) => println!(
+                "  Action    : {} PROCESS {}",
                 if audit_mode { "📋" } else { "💀" },
-                if audit_mode { "WOULD BE TERMINATED" } else { "TERMINATED" }),
+                if audit_mode {
+                    "WOULD BE TERMINATED"
+                } else {
+                    "TERMINATED"
+                }
+            ),
             Err(e) => println!(
                 "  Action    : ⚠️  Kill failed: {} (kernel block sufficient)",
                 e
@@ -293,14 +316,18 @@ fn handle_event(event: &Event, ai_analyst: &Option<AIAnalyst>, json_logger: &Opt
     } else if event.event_type == EVENT_TYPE_EXEC {
         // Log exec events (not blocked, just monitored)
         let container_name = resolve_container(event.pid, event.cgroup_id);
-        log::info!("📋 Exec: {} (PID: {}) in {}", comm, event.pid, container_name);
+        log::info!(
+            "📋 Exec: {} (PID: {}) in {}",
+            comm,
+            event.pid,
+            container_name
+        );
     }
 }
 
 fn kill_process(pid: u32) -> Result<()> {
     signal::kill(Pid::from_raw(pid as i32), Signal::SIGKILL).context("Failed to send SIGKILL")
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -323,13 +350,8 @@ mod tests {
     #[test]
     fn test_event_type_labels() {
         // Test that event types are correctly labeled
-        let event_types = vec![
-            (1, "mmap"),
-            (4, "mprotect"),
-            (5, "ptrace"),
-            (6, "exec"),
-        ];
-        
+        let event_types = vec![(1, "mmap"), (4, "mprotect"), (5, "ptrace"), (6, "exec")];
+
         for (event_type, expected_label) in event_types {
             let label = match event_type {
                 1 => "mmap",

@@ -138,7 +138,6 @@ impl MetricsServer {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -165,4 +164,3 @@ mod tests {
         assert_eq!(metrics.mmap_events.load(Ordering::Relaxed), 0);
     }
 }
-

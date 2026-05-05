@@ -2,6 +2,10 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[cfg(target_os = "linux")]
+pub mod ai_analyst;
+#[cfg(target_os = "linux")]
+pub mod config;
+#[cfg(target_os = "linux")]
 pub mod dashboard;
 #[cfg(target_os = "linux")]
 mod ebpf_engine;
@@ -15,10 +19,6 @@ pub mod metrics;
 pub mod net_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_engine;
-#[cfg(target_os = "linux")]
-pub mod ai_analyst;
-#[cfg(target_os = "linux")]
-pub mod config;
 
 #[derive(Parser)]
 #[command(name = "nexus-axiom")]
@@ -79,8 +79,12 @@ fn start_protection(audit: bool) -> Result<()> {
     });
 
     // Override audit mode if specified in CLI
-    let audit_mode = if audit { true } else { config.security.mode == "audit" };
-    
+    let audit_mode = if audit {
+        true
+    } else {
+        config.security.mode == "audit"
+    };
+
     if audit_mode {
         println!("📋 Running in AUDIT MODE (logging only, no blocking)\n");
     }
@@ -96,7 +100,12 @@ fn start_protection(audit: bool) -> Result<()> {
 
     // 2. Initialize Filesystem Protection
     let mut fs_protection = FsProtection::new();
-    log::info!("🛡️  Filesystem protection initialized");
+    if let Err(e) = fs_protection.start_monitoring() {
+        log::warn!("⚠️  FS Protection failed to start: {}", e);
+        log::warn!("   Continuing without real-time file monitoring...");
+    } else {
+        log::info!("🛡️  Filesystem protection: Real-time monitoring active");
+    }
 
     // 3. Start Metrics Server
     let metrics = Arc::new(MetricsServer::new());
@@ -104,7 +113,7 @@ fn start_protection(audit: bool) -> Result<()> {
         log::warn!("⚠️  Metrics server failed to start: {}", e);
         log::warn!("   Continuing without metrics endpoint...");
     }
-    
+
     // 4. Start Dashboard
     let dashboard = dashboard::Dashboard::new(metrics.clone());
     if let Err(e) = dashboard.start(config.server.dashboard_port) {

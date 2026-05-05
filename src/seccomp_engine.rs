@@ -33,17 +33,17 @@ impl SeccompEngine {
 
         // Block dangerous syscalls that a security daemon should never need
         let blocked_syscalls = vec![
-            "execve",      // No spawning processes
-            "execveat",    // No spawning processes
-            "ptrace",      // No debugging other processes
-            "fork",        // No forking
-            "vfork",       // No forking
-            "clone",       // No cloning (except for threads)
-            "socket",      // No new network connections (we use existing ones)
-            "connect",     // No new connections
-            "accept",      // No accepting connections
-            "bind",        // No binding to ports (already bound)
-            "listen",      // No listening (already listening)
+            "execve",   // No spawning processes
+            "execveat", // No spawning processes
+            "ptrace",   // No debugging other processes
+            "fork",     // No forking
+            "vfork",    // No forking
+            "clone",    // No cloning (except for threads)
+            "socket",   // No new network connections (we use existing ones)
+            "connect",  // No new connections
+            "accept",   // No accepting connections
+            "bind",     // No binding to ports (already bound)
+            "listen",   // No listening (already listening)
         ];
 
         for syscall_name in blocked_syscalls {

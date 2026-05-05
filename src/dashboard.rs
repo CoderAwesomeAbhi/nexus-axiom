@@ -35,8 +35,10 @@ impl Dashboard {
                         let request = String::from_utf8_lossy(&buffer[..n]);
                         if request.starts_with("GET") {
                             let html = Self::generate_html(&metrics);
-                            let response =
-                                format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}", html);
+                            let response = format!(
+                                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}",
+                                html
+                            );
                             let _ = stream.write_all(response.as_bytes());
                         } else {
                             // Reject non-GET requests
@@ -117,7 +119,6 @@ impl Dashboard {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,9 +127,13 @@ mod tests {
     #[test]
     fn test_dashboard_html_generation() {
         let metrics = Arc::new(crate::metrics::MetricsServer::new());
-        metrics.blocked_events.store(5, std::sync::atomic::Ordering::Relaxed);
-        metrics.total_events.store(10, std::sync::atomic::Ordering::Relaxed);
-        
+        metrics
+            .blocked_events
+            .store(5, std::sync::atomic::Ordering::Relaxed);
+        metrics
+            .total_events
+            .store(10, std::sync::atomic::Ordering::Relaxed);
+
         let html = Dashboard::generate_html(&metrics);
         assert!(html.contains("Nexus Axiom"));
         assert!(html.contains("<p class=\"value\">5</p>"));
@@ -139,7 +144,12 @@ mod tests {
     fn test_dashboard_creation() {
         let metrics = Arc::new(crate::metrics::MetricsServer::new());
         let dashboard = Dashboard::new(metrics);
-        assert!(dashboard.metrics.blocked_events.load(std::sync::atomic::Ordering::Relaxed) == 0);
+        assert!(
+            dashboard
+                .metrics
+                .blocked_events
+                .load(std::sync::atomic::Ordering::Relaxed)
+                == 0
+        );
     }
 }
-

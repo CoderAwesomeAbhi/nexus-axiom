@@ -1,13 +1,145 @@
-#![allow(dead_code)]
-use std::collections::HashSet;
+use anyhow::Result;
+use inotify::{Inotify, WatchMask};
+use log;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::time::SystemTime;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
+use std::time::Duration;
 
-/// Critical system paths that should be protected from unauthorized writes
+/// FsProtection monitors critical system files for unauthorized modifications
+/// using inotify for real-time detection
 pub struct FsProtection {
-    critical_paths: HashSet<String>,
-    last_check: SystemTime,
+    critical_paths: Vec<String>,
+    running: Arc<AtomicBool>,
+}
+
+impl FsProtection {
+    pub fn new() -> Self {
+        let mut critical_paths = Vec::new();
+
+        // Critical binaries
+        critical_paths.push("/usr/bin/sudo".to_string());
+        critical_paths.push("/usr/bin/su".to_string());
+        critical_paths.push("/bin/login".to_string());
+        critical_paths.push("/usr/sbin/sshd".to_string());
+
+        // Critical configs
+        critical_paths.push("/etc/passwd".to_string());
+        critical_paths.push("/etc/shadow".to_string());
+        critical_paths.push("/etc/sudoers".to_string());
+        critical_paths.push("/etc/ssh/sshd_config".to_string());
+
+        // System libraries
+        critical_paths.push("/lib/x86_64-linux-gnu/libc.so.6".to_string());
+        critical_paths.push("/lib/x86_64-linux-gnu/libpam.so.0".to_string());
+
+        Self {
+            critical_paths,
+            running: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Start real-time monitoring with inotify
+    pub fn start_monitoring(&mut self) -> Result<()> {
+        self.running.store(true, Ordering::SeqCst);
+
+        let mut inotify = Inotify::init()?;
+        let mut watch_descriptors = HashMap::new();
+
+        // Add watches for all critical paths
+        for path in &self.critical_paths {
+            if Path::new(path).exists() {
+                match inotify.watches().add(
+                    path,
+                    WatchMask::MODIFY | WatchMask::ATTRIB | WatchMask::DELETE_SELF,
+                ) {
+                    Ok(wd) => {
+                        watch_descriptors.insert(wd, path.clone());
+                        log::info!("🛡️  Monitoring: {}", path);
+                    }
+                    Err(e) => {
+                        log::warn!("⚠️  Failed to watch {}: {}", path, e);
+                    }
+                }
+            } else {
+                log::warn!("⚠️  Critical file missing: {}", path);
+            }
+        }
+
+        log::info!(
+            "✅ FS Protection: Monitoring {} critical paths in real-time",
+            watch_descriptors.len()
+        );
+
+        // Spawn monitoring thread
+        let running = self.running.clone();
+        thread::spawn(move || {
+            let mut buffer = [0; 4096];
+
+            while running.load(Ordering::SeqCst) {
+                match inotify.read_events(&mut buffer) {
+                    Ok(events) => {
+                        for event in events {
+                            if let Some(path) = watch_descriptors.get(&event.wd) {
+                                if event.mask.contains(WatchMask::MODIFY) {
+                                    log::warn!("🚨 CRITICAL FILE MODIFIED: {}", path);
+                                    println!("🚨 ALERT: Critical file modified: {}", path);
+                                }
+                                if event.mask.contains(WatchMask::ATTRIB) {
+                                    log::warn!("🚨 CRITICAL FILE ATTRIBUTES CHANGED: {}", path);
+                                    println!("🚨 ALERT: File attributes changed: {}", path);
+                                }
+                                if event.mask.contains(WatchMask::DELETE_SELF) {
+                                    log::error!("🚨 CRITICAL FILE DELETED: {}", path);
+                                    println!("🚨 ALERT: Critical file deleted: {}", path);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        // No events, sleep briefly
+                        thread::sleep(Duration::from_millis(100));
+                    }
+                    Err(e) => {
+                        log::error!("❌ inotify error: {}", e);
+                        break;
+                    }
+                }
+            }
+
+            log::info!("FS Protection monitoring stopped");
+        });
+
+        Ok(())
+    }
+
+    /// Stop monitoring
+    pub fn stop(&mut self) {
+        self.running.store(false, Ordering::SeqCst);
+    }
+
+    /// Legacy check_integrity for compatibility (now just validates paths exist)
+    pub fn check_integrity(&self) {
+        let mut checked = 0;
+        let mut missing = 0;
+
+        for path in &self.critical_paths {
+            checked += 1;
+            if !Path::new(path).exists() {
+                missing += 1;
+                log::warn!("⚠️  Critical file missing: {}", path);
+            }
+        }
+
+        log::debug!(
+            "🛡️  FS Protection: {} paths checked, {} missing",
+            checked,
+            missing
+        );
+    }
 }
 
 impl Default for FsProtection {
@@ -16,123 +148,20 @@ impl Default for FsProtection {
     }
 }
 
-impl FsProtection {
-    pub fn new() -> Self {
-        let mut critical_paths = HashSet::new();
-
-        // System configuration
-        critical_paths.insert("/etc/passwd".to_string());
-        critical_paths.insert("/etc/shadow".to_string());
-        critical_paths.insert("/etc/sudoers".to_string());
-        critical_paths.insert("/etc/ssh/sshd_config".to_string());
-
-        // Boot files
-        critical_paths.insert("/boot/vmlinuz".to_string());
-        critical_paths.insert("/boot/initrd.img".to_string());
-
-        // Critical binaries
-        critical_paths.insert("/usr/bin/sudo".to_string());
-        critical_paths.insert("/usr/bin/su".to_string());
-        critical_paths.insert("/bin/login".to_string());
-
-        let mut fs = Self { 
-            critical_paths,
-            last_check: SystemTime::now(),
-        };
-        
-        // Initial check
-        fs.check_integrity();
-        fs
-    }
-
-    pub fn is_critical(&self, path: &str) -> bool {
-        self.critical_paths.contains(path)
-            || path.starts_with("/boot/")
-            || path.starts_with("/sys/")
-            || path.starts_with("/proc/sys/kernel/")
-    }
-
-    pub fn hash_path(path: &str) -> u32 {
-        let mut hash: u32 = 5381;
-        for byte in path.bytes() {
-            hash = hash.wrapping_mul(33).wrapping_add(byte as u32);
-        }
-        hash
-    }
-
-    pub fn get_critical_paths(&self) -> &HashSet<String> {
-        &self.critical_paths
-    }
-
-    pub fn check_integrity(&mut self) {
-        // Validate state
-        if self.critical_paths.is_empty() {
-            log::warn!("FS protection not properly initialized");
-            return;
-        }
-
-        let now = SystemTime::now();
-        if now.duration_since(self.last_check).unwrap_or(Duration::from_secs(0)).as_secs() < 60 {
-            return; // Check at most once per minute
-        }
-        self.last_check = now;
-
-        let mut checked = 0;
-        let mut missing = 0;
-
-        for path in &self.critical_paths {
-            if Path::new(path).exists() {
-                if let Ok(metadata) = fs::metadata(path) {
-                    if let Ok(modified) = metadata.modified() {
-                        if let Ok(duration) = now.duration_since(modified) {
-                            if duration.as_secs() < 300 { // Modified in last 5 minutes
-                                log::warn!("🔍 Critical file recently modified: {}", path);
-                            }
-                        }
-                    }
-                }
-                checked += 1;
-            } else {
-                missing += 1;
-            }
-        }
-
-        log::info!("🛡️  FS Protection: {} paths monitored, {} missing", checked, missing);
-    }
-}
-
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_is_critical() {
+    fn test_fs_protection_creation() {
         let fs = FsProtection::new();
-        assert!(fs.is_critical("/etc/passwd"));
-        assert!(fs.is_critical("/etc/shadow"));
-        assert!(fs.is_critical("/boot/vmlinuz"));
-        assert!(fs.is_critical("/usr/bin/sudo"));
-        assert!(!fs.is_critical("/tmp/test.txt"));
+        assert!(!fs.critical_paths.is_empty());
+        assert!(fs.critical_paths.contains(&"/etc/passwd".to_string()));
     }
 
     #[test]
-    fn test_hash_path() {
-        let hash1 = FsProtection::hash_path("/etc/passwd");
-        let hash2 = FsProtection::hash_path("/etc/passwd");
-        let hash3 = FsProtection::hash_path("/etc/shadow");
-        
-        assert_eq!(hash1, hash2); // Same path = same hash
-        assert_ne!(hash1, hash3); // Different paths = different hashes
-    }
-
-    #[test]
-    fn test_get_critical_paths() {
+    fn test_check_integrity() {
         let fs = FsProtection::new();
-        let paths = fs.get_critical_paths();
-        assert!(paths.contains("/etc/passwd"));
-        assert!(paths.contains("/etc/shadow"));
-        assert!(paths.len() > 5);
+        fs.check_integrity(); // Should not panic
     }
 }
