@@ -52,7 +52,33 @@ impl NetEngine {
 
         blocklist.update(&ip_bytes, &val.to_ne_bytes(), MapFlags::ANY)?;
         log::info!("🚫 Blocked IP: {}", ip);
-        self.blocked_packets.fetch_add(1, Ordering::Relaxed);
+        // Note: blocked_packets stat is incremented when packets are actually dropped by XDP
+        Ok(())
+    }
+
+    /// Block a TCP/UDP port
+    pub fn block_port(&self, port: u16) -> Result<()> {
+        let skel = self.skel.as_ref().context("XDP not loaded")?;
+        let maps = skel.maps();
+        let blocked_ports = maps.blocked_ports();
+
+        let port_bytes = port.to_ne_bytes();
+        let val: u8 = 1;
+
+        blocked_ports.update(&port_bytes, &val.to_ne_bytes(), MapFlags::ANY)?;
+        log::info!("🚫 Blocked port: {}", port);
+        Ok(())
+    }
+
+    /// Unblock a TCP/UDP port
+    pub fn unblock_port(&self, port: u16) -> Result<()> {
+        let skel = self.skel.as_ref().context("XDP not loaded")?;
+        let maps = skel.maps();
+        let blocked_ports = maps.blocked_ports();
+
+        let port_bytes = port.to_ne_bytes();
+        blocked_ports.delete(&port_bytes)?;
+        log::info!("✅ Unblocked port: {}", port);
         Ok(())
     }
 

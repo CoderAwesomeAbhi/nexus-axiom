@@ -90,7 +90,7 @@ impl EbpfEngine {
         let maps = skel.maps();
 
         let metrics = self.metrics.clone();
-        let (event_tx, event_rx) = mpsc::channel::<Event>();
+        let (event_tx, event_rx) = mpsc::sync_channel::<Event>(1000); // Bounded to prevent backlog
 
         let ai_analyst = self.ai_analyst.clone();
         let json_logger = self.json_logger.clone();
@@ -119,6 +119,10 @@ impl EbpfEngine {
 
             event_count += 1;
             if event_count > MAX_EVENTS_PER_SEC {
+                log::warn!(
+                    "⚠️  Rate limit exceeded: Dropping events ({}/sec)",
+                    event_count
+                );
                 return 0; // Drop event
             }
 
@@ -266,12 +270,14 @@ fn handle_event(
         println!("  prot=0x{:02x}  flags=0x{:02x}", event.prot, event.flags);
         println!("  Status    : ✅ BLOCKED AT KERNEL LEVEL");
 
-        // AI Analysis
-        if let Some(analyst) = ai_analyst {
-            if let Ok(analysis) = analyst.analyze_threat(event.pid, &comm, "W^X violation") {
-                println!("  AI Analysis: {}", analysis);
-            }
-        }
+        // AI Analysis (disabled in hot path for performance)
+        // Can be enabled as async background task if needed
+        // if let Some(analyst) = ai_analyst {
+        //     if let Ok(analysis) = analyst.analyze_threat(event.pid, &comm, "W^X violation") {
+        //         println!("  AI Analysis: {}", analysis);
+        //     }
+        // }
+        let _ = ai_analyst; // Suppress unused warning
 
         // JSON Logging
         if let Some(logger) = json_logger {
@@ -318,6 +324,15 @@ fn handle_event(
         let container_name = resolve_container(event.pid, event.cgroup_id);
         log::info!(
             "📋 Exec: {} (PID: {}) in {}",
+            comm,
+            event.pid,
+            container_name
+        );
+    } else if event.event_type == EVENT_TYPE_PTRACE {
+        // Log ptrace events (monitoring only)
+        let container_name = resolve_container(event.pid, event.cgroup_id);
+        log::info!(
+            "🔍 Ptrace: {} (PID: {}) in {}",
             comm,
             event.pid,
             container_name

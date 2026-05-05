@@ -31,9 +31,28 @@ impl FsProtection {
         critical_paths.push("/etc/sudoers".to_string());
         critical_paths.push("/etc/ssh/sshd_config".to_string());
 
-        // System libraries
-        critical_paths.push("/lib/x86_64-linux-gnu/libc.so.6".to_string());
-        critical_paths.push("/lib/x86_64-linux-gnu/libpam.so.0".to_string());
+        // System libraries (try multiple common paths)
+        for lib_path in &[
+            "/lib/x86_64-linux-gnu/libc.so.6",
+            "/lib64/libc.so.6",
+            "/usr/lib/libc.so.6",
+        ] {
+            if Path::new(lib_path).exists() {
+                critical_paths.push(lib_path.to_string());
+                break;
+            }
+        }
+
+        for pam_path in &[
+            "/lib/x86_64-linux-gnu/libpam.so.0",
+            "/lib64/libpam.so.0",
+            "/usr/lib/libpam.so.0",
+        ] {
+            if Path::new(pam_path).exists() {
+                critical_paths.push(pam_path.to_string());
+                break;
+            }
+        }
 
         Self {
             critical_paths,

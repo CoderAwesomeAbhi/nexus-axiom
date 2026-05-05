@@ -82,7 +82,7 @@ fn start_protection(audit: bool) -> Result<()> {
     let audit_mode = if audit {
         true
     } else {
-        config.security.mode == "audit"
+        config.security.mode == "audit" || !config.security.kill_on_violation
     };
 
     if audit_mode {
@@ -142,12 +142,13 @@ fn start_protection(audit: bool) -> Result<()> {
         }
     }
 
-    // Note: Port blocking would require XDP program modification
-    // Currently blocked_ports in config is not implemented
-    if !config.network.blocked_ports.is_empty() {
-        log::warn!(
-            "⚠️  blocked_ports in config is not yet implemented (requires XDP program changes)"
-        );
+    // Apply port blocks from config
+    for port in &config.network.blocked_ports {
+        if let Err(e) = net_engine.block_port(*port) {
+            log::warn!("Failed to block port {}: {}", port, e);
+        } else {
+            log::info!("🚫 Blocked port from config: {}", port);
+        }
     }
 
     println!("✅ eBPF hooks loaded");
@@ -222,11 +223,30 @@ fn monitor_events() -> Result<()> {
 
 fn show_status() -> Result<()> {
     println!("\n🛡️  NEXUS AXIOM STATUS\n");
-    println!("✅ eBPF LSM Hooks: ACTIVE");
-    println!("✅ Ring Buffer: 1MB allocated");
+
+    // Check if actually running via systemd
+    let status_output = std::process::Command::new("systemctl")
+        .args(&["is-active", "nexus-axiom"])
+        .output();
+
+    match status_output {
+        Ok(output) if output.status.success() => {
+            println!("✅ Service: RUNNING");
+            println!("✅ eBPF LSM Hooks: ACTIVE (assumed if service running)");
+        }
+        _ => {
+            println!("❌ Service: NOT RUNNING");
+            println!("   Start with: sudo systemctl start nexus-axiom");
+            return Ok(());
+        }
+    }
+
     println!("\n📊 Features:");
     println!("   • W^X memory blocking");
     println!("   • Process execution monitoring");
+    println!("   • Network filtering (XDP)");
+    println!("   • File system protection");
+    println!("\n💡 View logs: sudo journalctl -u nexus-axiom -f");
 
     Ok(())
 }
