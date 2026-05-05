@@ -1,8 +1,7 @@
 use anyhow::Result;
-use inotify::{Inotify, WatchMask};
+use inotify::{EventMask, Inotify, WatchMask};
 use log;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -84,15 +83,15 @@ impl FsProtection {
                     Ok(events) => {
                         for event in events {
                             if let Some(path) = watch_descriptors.get(&event.wd) {
-                                if event.mask.contains(WatchMask::MODIFY) {
+                                if event.mask.contains(EventMask::MODIFY) {
                                     log::warn!("🚨 CRITICAL FILE MODIFIED: {}", path);
                                     println!("🚨 ALERT: Critical file modified: {}", path);
                                 }
-                                if event.mask.contains(WatchMask::ATTRIB) {
+                                if event.mask.contains(EventMask::ATTRIB) {
                                     log::warn!("🚨 CRITICAL FILE ATTRIBUTES CHANGED: {}", path);
                                     println!("🚨 ALERT: File attributes changed: {}", path);
                                 }
-                                if event.mask.contains(WatchMask::DELETE_SELF) {
+                                if event.mask.contains(EventMask::DELETE_SELF) {
                                     log::error!("🚨 CRITICAL FILE DELETED: {}", path);
                                     println!("🚨 ALERT: Critical file deleted: {}", path);
                                 }

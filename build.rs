@@ -24,9 +24,35 @@ fn main() {
         Ok(_) => println!("cargo:warning=LSM skeleton generated successfully"),
         Err(e) => {
             println!("cargo:warning=Failed to generate LSM skeleton: {}", e);
-            println!("cargo:warning=This is expected in CI without full BPF headers");
-            // Create empty skeleton file so compilation can continue
-            std::fs::write(&out_lsm, "// Skeleton generation failed\n").ok();
+            println!("cargo:warning=Creating stub skeleton for CI");
+            // Create stub skeleton that compiles but doesn't work
+            let stub = r#"
+// Stub skeleton - eBPF compilation failed
+pub struct NexusWorkingSkel<'a> {
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+pub struct NexusWorkingSkelBuilder;
+
+impl NexusWorkingSkelBuilder {
+    pub fn default() -> Self {
+        Self
+    }
+    
+    pub fn open(self) -> Result<OpenNexusWorkingSkel, anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available - compilation failed"))
+    }
+}
+
+pub struct OpenNexusWorkingSkel;
+
+impl OpenNexusWorkingSkel {
+    pub fn load(self) -> Result<NexusWorkingSkel<'static>, anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available"))
+    }
+}
+"#;
+            std::fs::write(&out_lsm, stub).expect("Failed to write stub skeleton");
         }
     }
     println!("cargo:rerun-if-changed={}", SRC_LSM);
@@ -41,9 +67,34 @@ fn main() {
         Ok(_) => println!("cargo:warning=XDP skeleton generated successfully"),
         Err(e) => {
             println!("cargo:warning=Failed to generate XDP skeleton: {}", e);
-            println!("cargo:warning=This is expected in CI without full BPF headers");
-            // Create empty skeleton file so compilation can continue
-            std::fs::write(&out_xdp, "// Skeleton generation failed\n").ok();
+            println!("cargo:warning=Creating stub skeleton for CI");
+            let stub = r#"
+// Stub skeleton - eBPF compilation failed
+pub struct NexusNetSkel<'a> {
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+pub struct NexusNetSkelBuilder;
+
+impl NexusNetSkelBuilder {
+    pub fn default() -> Self {
+        Self
+    }
+    
+    pub fn open(self) -> Result<OpenNexusNetSkel, anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available - compilation failed"))
+    }
+}
+
+pub struct OpenNexusNetSkel;
+
+impl OpenNexusNetSkel {
+    pub fn load(self) -> Result<NexusNetSkel<'static>, anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available"))
+    }
+}
+"#;
+            std::fs::write(&out_xdp, stub).expect("Failed to write stub skeleton");
         }
     }
     println!("cargo:rerun-if-changed={}", SRC_XDP);
