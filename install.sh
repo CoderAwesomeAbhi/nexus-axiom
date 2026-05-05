@@ -90,7 +90,10 @@ success "Repository ready"
 # Compile
 info "Compiling Nexus Axiom (this may take 2-3 minutes)..."
 source "$HOME/.cargo/env"
-cargo build --release --quiet 2>&1 | grep -v "warning:" || true
+cargo build --release 2>&1 | tee /tmp/nexus-build.log | grep -v "warning:"
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    error "Compilation failed. See /tmp/nexus-build.log"
+fi
 success "Compilation complete (eBPF embedded in binary)"
 
 # Create config

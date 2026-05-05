@@ -39,8 +39,8 @@ impl SeccompEngine {
             "ptrace",   // No debugging other processes
             "fork",     // No forking
             "vfork",    // No forking
-            // clone is ALLOWED (needed for threads)
-            // socket/bind/listen are ALLOWED (servers already bound)
+                        // clone is ALLOWED (needed for threads)
+                        // socket/bind/listen are ALLOWED (servers already bound)
         ];
 
         for syscall_name in blocked_syscalls {

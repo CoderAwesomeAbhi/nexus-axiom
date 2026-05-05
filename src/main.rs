@@ -142,15 +142,23 @@ fn start_protection(audit: bool) -> Result<()> {
         }
     }
 
+    // Note: Port blocking would require XDP program modification
+    // Currently blocked_ports in config is not implemented
+    if !config.network.blocked_ports.is_empty() {
+        log::warn!(
+            "⚠️  blocked_ports in config is not yet implemented (requires XDP program changes)"
+        );
+    }
+
     println!("✅ eBPF hooks loaded");
-    
+
     // 4. Apply seccomp LAST (after all servers/threads are running)
     let mut seccomp = SeccompEngine::new();
     if let Err(e) = seccomp.apply_strict_profile() {
         log::warn!("⚠️  Seccomp failed to apply: {}", e);
         log::warn!("   Continuing without seccomp isolation...");
     }
-    
+
     println!(
         "✅ Mode: {}",
         if audit_mode {
