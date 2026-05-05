@@ -136,6 +136,7 @@ impl EbpfEngine {
 
             event_count += 1;
             if event_count > MAX_EVENTS_PER_SEC {
+                metrics.dropped_events.fetch_add(1, Ordering::Relaxed);
                 log::warn!(
                     "⚠️  Rate limit exceeded: Dropping events ({}/sec)",
                     event_count

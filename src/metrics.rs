@@ -14,6 +14,7 @@ pub struct MetricsServer {
     pub exec_events: Arc<AtomicU64>,
     pub file_events: Arc<AtomicU64>,
     pub network_drops: Arc<AtomicU64>,
+    pub dropped_events: Arc<AtomicU64>,
     pub start_time: Instant,
 }
 
@@ -34,6 +35,7 @@ impl MetricsServer {
             exec_events: Arc::new(AtomicU64::new(0)),
             file_events: Arc::new(AtomicU64::new(0)),
             network_drops: Arc::new(AtomicU64::new(0)),
+            dropped_events: Arc::new(AtomicU64::new(0)),
             start_time: Instant::now(),
         }
     }
@@ -47,6 +49,7 @@ impl MetricsServer {
         let exec = self.exec_events.clone();
         let file = self.file_events.clone();
         let network = self.network_drops.clone();
+        let dropped = self.dropped_events.clone();
         let start = self.start_time;
 
         let listener = match TcpListener::bind(format!("0.0.0.0:{}", port)) {
@@ -108,6 +111,10 @@ impl MetricsServer {
                                     # TYPE nexus_axiom_network_drops counter\n\
                                     nexus_axiom_network_drops {}\n\
                                     \n\
+                                    # HELP nexus_axiom_dropped_events Events dropped due to rate limiting\n\
+                                    # TYPE nexus_axiom_dropped_events counter\n\
+                                    nexus_axiom_dropped_events {}\n\
+                                    \n\
                                     # HELP nexus_axiom_uptime_seconds Uptime in seconds\n\
                                     # TYPE nexus_axiom_uptime_seconds gauge\n\
                                     nexus_axiom_uptime_seconds {}\n",
@@ -119,6 +126,7 @@ impl MetricsServer {
                                     exec.load(Ordering::Relaxed),
                                     file.load(Ordering::Relaxed),
                                     network.load(Ordering::Relaxed),
+                                    dropped.load(Ordering::Relaxed),
                                     uptime
                                 );
                                 let _ = stream.write_all(response.as_bytes());
