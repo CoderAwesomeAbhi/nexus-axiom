@@ -4,7 +4,7 @@
 
 # 🛡️ Nexus Axiom
 
-**The First eBPF Security Tool That Actually Kills Exploits**
+**eBPF security that blocks exploits before execution using LSM hooks (not tracepoints)**
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Linux](https://img.shields.io/badge/platform-Linux%205.8%2B-green.svg?style=for-the-badge)](https://kernel.org)
