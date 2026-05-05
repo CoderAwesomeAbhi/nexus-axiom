@@ -31,7 +31,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libbpf-dev libelf-dev libseccomp-dev pkg-config libssl-dev
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings || echo "⚠️  Clippy warnings found (informational only)"
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   tests:
     name: Unit Tests
@@ -44,7 +44,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libbpf-dev libelf-dev libseccomp-dev pkg-config libssl-dev
       - name: Run tests
-        run: cargo test --bins || echo "No tests defined yet"
+        run: cargo test --lib --bins
 
   security:
     name: Security Audit
@@ -55,7 +55,7 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit
       - name: Run security audit
-        run: cargo audit || echo "⚠️  Security advisories found (informational only)"
+        run: cargo audit
 
   structure:
     name: Project Structure

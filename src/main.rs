@@ -78,12 +78,8 @@ fn start_protection(audit: bool) -> Result<()> {
         config::Config::default()
     });
 
-    // Override audit mode if specified in CLI
-    let audit_mode = if audit {
-        true
-    } else {
-        config.security.mode == "audit" || !config.security.kill_on_violation
-    };
+    // Audit mode: log only, no blocking (from config or CLI)
+    let audit_mode = audit || config.security.mode == "audit";
 
     if audit_mode {
         println!("📋 Running in AUDIT MODE (logging only, no blocking)\n");
@@ -117,7 +113,11 @@ fn start_protection(audit: bool) -> Result<()> {
         log::warn!("   Continuing without dashboard...");
     }
 
-    let mut engine = EbpfEngine::new(metrics.clone(), audit_mode)?;
+    let mut engine = EbpfEngine::new(
+        metrics.clone(),
+        audit_mode,
+        config.security.kill_on_violation,
+    )?;
     let mut net_engine = NetEngine::new()?;
 
     // Load and attach eBPF programs
@@ -207,7 +207,7 @@ fn monitor_events() -> Result<()> {
         use std::sync::Arc;
 
         let metrics = Arc::new(MetricsServer::new());
-        let mut engine = EbpfEngine::new(metrics, false)?;
+        let mut engine = EbpfEngine::new(metrics, false, true)?;
         engine.load_and_attach()?;
         let running = Arc::new(AtomicBool::new(true));
         let mut fs_protection = FsProtection::new();
@@ -226,7 +226,7 @@ fn show_status() -> Result<()> {
 
     // Check if actually running via systemd
     let status_output = std::process::Command::new("systemctl")
-        .args(&["is-active", "nexus-axiom"])
+        .args(["is-active", "nexus-axiom"])
         .output();
 
     match status_output {

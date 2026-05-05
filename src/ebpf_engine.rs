@@ -49,10 +49,15 @@ pub struct EbpfEngine {
     ai_analyst: Option<AIAnalyst>,
     json_logger: Option<JsonLogger>,
     audit_mode: bool,
+    kill_on_violation: bool,
 }
 
 impl EbpfEngine {
-    pub fn new(metrics: Arc<crate::metrics::MetricsServer>, audit_mode: bool) -> Result<Self> {
+    pub fn new(
+        metrics: Arc<crate::metrics::MetricsServer>,
+        audit_mode: bool,
+        kill_on_violation: bool,
+    ) -> Result<Self> {
         let ai_analyst = AIAnalyst::new(None).ok();
         let json_logger = Some(JsonLogger::new(
             Some("/var/log/nexus-axiom/events.json"),
@@ -65,6 +70,7 @@ impl EbpfEngine {
             ai_analyst,
             json_logger,
             audit_mode,
+            kill_on_violation,
         })
     }
 
@@ -74,8 +80,19 @@ impl EbpfEngine {
         let mut skel = open_skel.load()?;
         skel.attach()?;
 
+        // Set audit mode in eBPF config map
+        let config_map = skel.maps().config();
+        let key: u32 = 0;
+        let value: u8 = if self.audit_mode { 1 } else { 0 };
+        config_map
+            .update(&key.to_ne_bytes(), &[value], libbpf_rs::MapFlags::ANY)
+            .context("Failed to set audit mode in eBPF")?;
+
         self.skel = Some(skel);
-        log::info!("✅ eBPF LSM hooks loaded and attached");
+        log::info!(
+            "✅ eBPF LSM hooks loaded and attached (audit_mode={})",
+            self.audit_mode
+        );
         Ok(())
     }
 
@@ -298,7 +315,7 @@ fn handle_event(
             logger.log_event(&json_event);
         }
 
-        match if audit_mode {
+        match if audit_mode || !self.kill_on_violation {
             log::warn!("📋 [AUDIT MODE] Would terminate process {}", event.pid);
             Ok(())
         } else {
@@ -306,8 +323,12 @@ fn handle_event(
         } {
             Ok(_) => println!(
                 "  Action    : {} PROCESS {}",
-                if audit_mode { "📋" } else { "💀" },
-                if audit_mode {
+                if audit_mode || !self.kill_on_violation {
+                    "📋"
+                } else {
+                    "💀"
+                },
+                if audit_mode || !self.kill_on_violation {
                     "WOULD BE TERMINATED"
                 } else {
                     "TERMINATED"

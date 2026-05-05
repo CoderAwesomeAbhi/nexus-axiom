@@ -38,6 +38,14 @@ struct {
     __type(value, __u8);
 } allowlist SEC(".maps");
 
+// Config map for audit mode
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, __u32);
+    __type(value, __u8);
+} config SEC(".maps");
+
 // LSM hook: mmap_file - Block W^X mmap
 SEC("lsm/mmap_file")
 int mmap_file_hook(void *ctx)
@@ -46,6 +54,11 @@ int mmap_file_hook(void *ctx)
     unsigned long prot = args[2];
     
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        // Check audit mode
+        __u32 key = 0;
+        __u8 *audit_mode = bpf_map_lookup_elem(&config, &key);
+        __u8 should_block = (audit_mode && *audit_mode == 0) ? 1 : 0;
+        
         struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
         if (e) {
             e->pid = bpf_get_current_pid_tgid() >> 32;
@@ -53,13 +66,13 @@ int mmap_file_hook(void *ctx)
             e->timestamp = bpf_ktime_get_ns();
             e->prot = prot;
             e->flags = args[3];
-            e->blocked = 1;
+            e->blocked = should_block;
             e->event_type = 1; // EVENT_TYPE_MMAP
             e->cgroup_id = bpf_get_current_cgroup_id();
             bpf_get_current_comm(&e->comm, sizeof(e->comm));
             bpf_ringbuf_submit(e, 0);
         }
-        return -EPERM;
+        return should_block ? -EPERM : 0;
     }
     return 0;
 }
@@ -72,6 +85,11 @@ int mprotect_hook(void *ctx)
     unsigned long prot = args[2];
     
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        // Check audit mode
+        __u32 key = 0;
+        __u8 *audit_mode = bpf_map_lookup_elem(&config, &key);
+        __u8 should_block = (audit_mode && *audit_mode == 0) ? 1 : 0;
+        
         struct event *e = bpf_ringbuf_reserve(&events, sizeof(*e), 0);
         if (e) {
             e->pid = bpf_get_current_pid_tgid() >> 32;
@@ -79,13 +97,13 @@ int mprotect_hook(void *ctx)
             e->timestamp = bpf_ktime_get_ns();
             e->prot = prot;
             e->flags = 0;
-            e->blocked = 1;
+            e->blocked = should_block;
             e->event_type = 4; // EVENT_TYPE_MPROTECT
             e->cgroup_id = bpf_get_current_cgroup_id();
             bpf_get_current_comm(&e->comm, sizeof(e->comm));
             bpf_ringbuf_submit(e, 0);
         }
-        return -EPERM;
+        return should_block ? -EPERM : 0;
     }
     return 0;
 }
