@@ -1,0 +1,19 @@
+apiVersion: nexus-axiom.io/v1
+kind: SecurityPolicy
+metadata:
+  name: production-policy
+  namespace: default
+spec:
+  enabled: true
+  blockWX: true
+  blockPtrace: true
+  protectedPaths:
+    - /etc/passwd
+    - /etc/shadow
+    - /etc/sudoers
+    - /boot/vmlinuz
+  allowedProcesses:
+    - systemd
+    - sshd
+    - kubelet
+  auditMode: false

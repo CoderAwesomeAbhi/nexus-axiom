@@ -5,6 +5,7 @@ use std::time::Duration;
 
 /// AI Analyst uses a local or remote LLM to generate plain-English
 /// threat analysis reports for blocked processes.
+#[derive(Clone)]
 pub struct AIAnalyst {
     api_key: Option<String>,
     endpoint: String,

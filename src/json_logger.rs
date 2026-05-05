@@ -2,7 +2,7 @@
 use serde::Serialize;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 /// Structured JSON event for SIEM integration and log analysis.
 #[derive(Serialize, Debug)]
@@ -50,6 +50,7 @@ pub struct SecurityInfo {
     pub cgroup_id: u64,
 }
 
+#[derive(Clone)]
 pub enum LogFormat {
     Standard,
     Splunk,
@@ -58,8 +59,9 @@ pub enum LogFormat {
 }
 
 /// JSON Logger writes structured security events to a file or stdout.
+#[derive(Clone)]
 pub struct JsonLogger {
-    file: Option<Mutex<std::fs::File>>,
+    file: Option<Arc<Mutex<std::fs::File>>>,
     stdout_mode: bool,
     format: LogFormat,
 }
@@ -75,7 +77,7 @@ impl JsonLogger {
                     .append(true)
                     .open(p)
                     .ok()
-                    .map(Mutex::new);
+                    .map(|f| Arc::new(Mutex::new(f)));
 
                 if file.is_some() {
                     log::info!("📝 JSON logging enabled: {}", p);

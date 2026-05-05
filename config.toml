@@ -1,0 +1,26 @@
+# Nexus Axiom Configuration
+
+[server]
+dashboard_port = 8080
+metrics_port = 9090
+
+[security]
+# Enforcement mode: "enforce" or "audit"
+mode = "enforce"
+
+# Kill processes that violate policy
+kill_on_violation = true
+
+[logging]
+# Log level: "error", "warn", "info", "debug", "trace"
+level = "info"
+
+# Log format: "text" or "json"
+format = "text"
+
+[network]
+# Blocked IPs (optional)
+blocked_ips = []
+
+# Blocked ports (optional)
+blocked_ports = []

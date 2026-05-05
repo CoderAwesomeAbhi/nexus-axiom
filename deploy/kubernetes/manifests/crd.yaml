@@ -4,64 +4,65 @@ metadata:
   name: securitypolicies.nexus-axiom.io
 spec:
   group: nexus-axiom.io
-  versions:
-  - name: v1
-    served: true
-    storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-        properties:
-          spec:
-            type: object
-            properties:
-              mode:
-                type: string
-                enum: ["enforce", "audit"]
-                description: "Enforcement mode: enforce blocks, audit logs only"
-              allowlist:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    process:
-                      type: string
-                      description: "Process name to allowlist"
-                    namespace:
-                      type: string
-                      description: "Kubernetes namespace"
-              blockWX:
-                type: boolean
-                description: "Block W^X memory allocations"
-              blockMprotect:
-                type: boolean
-                description: "Block W^X mprotect calls"
-              blockPtrace:
-                type: boolean
-                description: "Block ptrace debugging"
-              protectedPaths:
-                type: array
-                items:
-                  type: string
-                description: "File paths to protect from writes"
-              networkPolicy:
-                type: object
-                properties:
-                  blockedPorts:
-                    type: array
-                    items:
-                      type: integer
-                  blockedIPs:
-                    type: array
-                    items:
-                      type: string
-                  rateLimitPPS:
-                    type: integer
-                    description: "Rate limit in packets per second"
-  scope: Namespaced
   names:
+    kind: SecurityPolicy
+    listKind: SecurityPolicyList
     plural: securitypolicies
     singular: securitypolicy
-    kind: SecurityPolicy
     shortNames:
-    - sp
+      - sp
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+                  description: Enable or disable this security policy.
+                blockWX:
+                  type: boolean
+                  description: Block write-xor-execute memory mappings.
+                  default: false
+                blockPtrace:
+                  type: boolean
+                  description: Block ptrace syscall usage.
+                  default: false
+                protectedPaths:
+                  type: array
+                  description: Filesystem paths protected from unauthorized access.
+                  items:
+                    type: string
+                    minLength: 1
+                  default: []
+                allowedProcesses:
+                  type: array
+                  description: Process names or paths permitted to run.
+                  items:
+                    type: string
+                    minLength: 1
+                  default: []
+                auditMode:
+                  type: boolean
+                  description: Log violations without enforcing policy.
+                  default: false
+      additionalPrinterColumns:
+        - name: Enabled
+          type: boolean
+          jsonPath: .spec.enabled
+        - name: AuditMode
+          type: boolean
+          jsonPath: .spec.auditMode
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

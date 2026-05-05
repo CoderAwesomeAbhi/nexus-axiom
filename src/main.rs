@@ -2,8 +2,6 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[cfg(target_os = "linux")]
-pub mod ai_analyst;
-#[cfg(target_os = "linux")]
 pub mod dashboard;
 #[cfg(target_os = "linux")]
 mod ebpf_engine;
@@ -17,6 +15,8 @@ pub mod metrics;
 pub mod net_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_engine;
+#[cfg(target_os = "linux")]
+pub mod ai_analyst;
 
 #[derive(Parser)]
 #[command(name = "nexus-axiom")]
@@ -57,6 +57,7 @@ fn main() -> Result<()> {
 fn start_protection(audit_mode: bool) -> Result<()> {
     use anyhow::Context;
     use ebpf_engine::EbpfEngine;
+    use fs_protection::FsProtection;
     use metrics::MetricsServer;
     use net_engine::NetEngine;
     use seccomp_engine::SeccompEngine;
@@ -72,17 +73,27 @@ fn start_protection(audit_mode: bool) -> Result<()> {
         anyhow::bail!("❌ Must run as root (sudo)");
     }
 
-    // 1. Secure the daemon itself
+    // 1. Apply seccomp FIRST (before spawning any threads)
     let mut seccomp = SeccompEngine::new();
     seccomp.apply_strict_profile()?;
 
-    // 2. Start Metrics Server
+    // 2. Initialize Filesystem Protection
+    let _fs_protection = FsProtection::new();
+    log::info!("🛡️  Filesystem protection initialized");
+
+    // 3. Start Metrics Server
     let metrics = Arc::new(MetricsServer::new());
-    metrics.start(9090);
+    if let Err(e) = metrics.start(9090) {
+        log::warn!("⚠️  Metrics server failed to start: {}", e);
+        log::warn!("   Continuing without metrics endpoint...");
+    }
     
     // 3. Start Dashboard
     let dashboard = dashboard::Dashboard::new(metrics.clone());
-    dashboard.start(8080);
+    if let Err(e) = dashboard.start(8080) {
+        log::warn!("⚠️  Dashboard failed to start: {}", e);
+        log::warn!("   Continuing without dashboard...");
+    }
 
     let mut engine = EbpfEngine::new(metrics.clone())?;
     let mut net_engine = NetEngine::new()?;
@@ -96,9 +107,6 @@ fn start_protection(audit_mode: bool) -> Result<()> {
         .load_and_attach()
         .context("Failed to load eBPF XDP programs")?;
 
-    // Block a test malicious IP for demonstration
-    net_engine.block_ip(std::net::Ipv4Addr::new(198, 51, 100, 42))?;
-
     println!("✅ eBPF hooks loaded");
     println!(
         "✅ Mode: {}",
@@ -111,6 +119,9 @@ fn start_protection(audit_mode: bool) -> Result<()> {
     println!("\n📊 Active Protections:");
     println!("   • W^X memory blocking (LSM)");
     println!("   • Network filtering (XDP)");
+    println!("   • Filesystem protection");
+    println!("   • AI threat analysis");
+    println!("   • JSON event logging");
     println!("\n⚠️  Press Ctrl+C to stop\n");
 
     // Setup signal handler
