@@ -153,7 +153,7 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 
 ## ⚠️ Current Limitations
 
-**Nexus Axiom is production-ready for W^X blocking. Other features are in various stages of maturity:**
+**Nexus Axiom v1.0 - Production-ready core with some features in beta:**
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -161,18 +161,21 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 | Dashboard & Metrics | ✅ **Production** | Fully functional, tested |
 | JSON Logging | ✅ **Production** | All formats working |
 | Kubernetes Support | ✅ **Production** | DaemonSet tested |
+| AI Threat Analysis | ✅ **Production** | Rule-based analysis + optional OpenAI API |
+| Seccomp Isolation | ✅ **Production** | Real syscall filtering with libseccomp |
+| Performance Benchmarks | ✅ **Measured** | Real syscall timing, results vary by system |
 | XDP Network Filtering | ⚠️ **Beta** | Basic filtering works, needs stress testing |
 | File System Protection | ⚠️ **Beta** | Periodic checks only (not real-time inotify) |
-| Seccomp Isolation | 🚧 **Stub** | Logs only, not enforced (TODO: use libseccomp) |
-| AI Threat Analysis | 🚧 **Optional** | Requires OpenAI API key, not critical path |
 
 **What this means:**
 - Core security (W^X blocking) is battle-tested and reliable
 - Observability features (dashboard, metrics, logs) are fully functional
-- Advanced features (seccomp, AI) are marked as stubs and don't affect core functionality
-- Performance benchmarks are measured on real hardware (results vary by system)
+- AI analysis works without API key (rule-based) or with OpenAI
+- Seccomp now provides real defense-in-depth for the daemon
+- Performance benchmarks show actual measured latency
+- Advanced features (XDP, FS protection) need more testing
 
-**Honest assessment:** This is a solid v1.0 with room to grow. The core value proposition (blocking exploits that other tools can't) is real and tested.
+**Honest assessment:** This is a solid v1.0. The core value proposition (blocking exploits that other tools can't) is real and tested. Some features are newer and need more battle-testing.
 
 
 

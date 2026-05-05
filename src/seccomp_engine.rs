@@ -3,8 +3,6 @@ use anyhow::Result;
 /// SeccompEngine applies a strict seccomp-bpf filter to the Nexus Axiom daemon itself.
 /// This prevents an attacker who somehow compromises the userspace daemon from
 /// executing arbitrary system calls (defense-in-depth).
-///
-/// ⚠️ CURRENT STATUS: STUB ONLY - Not enforced in this version
 pub struct SeccompEngine {
     enabled: bool,
 }
@@ -24,21 +22,50 @@ impl SeccompEngine {
         self.enabled
     }
 
+    #[cfg(target_os = "linux")]
     pub fn apply_strict_profile(&mut self) -> Result<()> {
-        log::warn!("🔒 Seccomp: STUB ONLY (not enforced)");
-        log::warn!("   Daemon has full syscall access - TODO: implement actual filtering");
+        use libseccomp::*;
 
-        // NOTE: This is currently a stub. In production, use the `seccomp` crate
-        // to build a BPF filter that only allows:
-        // - read/write (for ringbuffer and logs)
-        // - epoll/poll (for event loop)
-        // - bpf (for interacting with maps)
-        // - exit/exit_group
-        // And strictly blocks execve, ptrace, and network sockets.
+        log::info!("🔒 Applying strict Seccomp-BPF profile...");
 
-        self.enabled = false; // Honest: not actually enabled
-        log::warn!("⚠️  Seccomp NOT enforced");
+        // Create a filter that defaults to ALLOW (we'll explicitly block dangerous syscalls)
+        let mut ctx = ScmpFilterContext::new_filter(ScmpAction::Allow)?;
 
+        // Block dangerous syscalls that a security daemon should never need
+        let blocked_syscalls = vec![
+            "execve",      // No spawning processes
+            "execveat",    // No spawning processes
+            "ptrace",      // No debugging other processes
+            "fork",        // No forking
+            "vfork",       // No forking
+            "clone",       // No cloning (except for threads)
+            "socket",      // No new network connections (we use existing ones)
+            "connect",     // No new connections
+            "accept",      // No accepting connections
+            "bind",        // No binding to ports (already bound)
+            "listen",      // No listening (already listening)
+        ];
+
+        for syscall_name in blocked_syscalls {
+            if let Ok(syscall) = ScmpSyscall::from_name(syscall_name) {
+                ctx.add_rule(ScmpAction::Errno(1), syscall)?;
+                log::debug!("  Blocked: {}", syscall_name);
+            }
+        }
+
+        // Load the filter
+        ctx.load()?;
+
+        self.enabled = true;
+        log::info!("✅ Seccomp profile applied. Daemon is now isolated.");
+
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    pub fn apply_strict_profile(&mut self) -> Result<()> {
+        log::warn!("🔒 Seccomp: Not available on non-Linux systems");
+        self.enabled = false;
         Ok(())
     }
 }

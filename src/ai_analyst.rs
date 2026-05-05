@@ -50,12 +50,9 @@ impl AIAnalyst {
             comm, pid, reason
         );
 
-        // If no key is configured, return fast deterministic output.
+        // If no key is configured, use rule-based analysis
         let Some(api_key) = self.api_key.as_ref() else {
-            return Ok(format!(
-                "AI Analysis (Simulated): The process '{}' attempted a highly suspicious W^X memory allocation indicative of shellcode injection or an unpacking routine. Recommendation: Isolate the host and investigate the origin of the binary.",
-                comm
-            ));
+            return Ok(self.rule_based_analysis(comm, reason));
         };
 
         let body = json!({
@@ -85,5 +82,44 @@ impl AIAnalyst {
             .as_str()
             .context("AI response missing choices[0].message.content")?;
         Ok(text.trim().to_string())
+    }
+
+    /// Rule-based threat analysis when no API key is available
+    fn rule_based_analysis(&self, comm: &str, reason: &str) -> String {
+        let threat_level = if comm.contains("exploit") || comm.contains("pwn") {
+            "CRITICAL"
+        } else if comm.contains("sh") || comm.contains("bash") {
+            "HIGH"
+        } else {
+            "MEDIUM"
+        };
+
+        let analysis = match reason {
+            r if r.contains("W^X") => {
+                format!(
+                    "[{}] Process '{}' attempted W^X memory allocation - classic shellcode injection pattern. \
+                    This is used by exploits to write malicious code and execute it. \
+                    Recommendation: Investigate binary origin, check for CVE matches, isolate host if suspicious.",
+                    threat_level, comm
+                )
+            }
+            r if r.contains("mprotect") => {
+                format!(
+                    "[{}] Process '{}' attempted to change memory protection to executable. \
+                    Common in JIT spraying and ROP chain attacks. \
+                    Recommendation: Analyze memory dumps, check for known exploit signatures.",
+                    threat_level, comm
+                )
+            }
+            _ => {
+                format!(
+                    "[{}] Process '{}' triggered security policy violation: {}. \
+                    Recommendation: Review process behavior and system logs.",
+                    threat_level, comm, reason
+                )
+            }
+        };
+
+        format!("Rule-Based Analysis: {}", analysis)
     }
 }
