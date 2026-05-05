@@ -1,0 +1,17 @@
+apiVersion: v2
+name: nexus-axiom
+description: eBPF security that blocks exploits before execution using LSM hooks
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - security
+  - ebpf
+  - lsm
+  - exploit-prevention
+home: https://github.com/CoderAwesomeAbhi/nexus-axiom
+sources:
+  - https://github.com/CoderAwesomeAbhi/nexus-axiom
+maintainers:
+  - name: CoderAwesomeAbhi
+    url: https://github.com/CoderAwesomeAbhi

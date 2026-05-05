@@ -1,0 +1,70 @@
+# Default values for nexus-axiom
+
+# Deployment mode: DaemonSet (runs on every node)
+mode: daemonset
+
+image:
+  repository: ghcr.io/coderawesomeabhi/nexus-axiom
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Security configuration
+security:
+  # Mode: "enforce" (kill violators) or "audit" (log only)
+  mode: "audit"
+  killOnViolation: false
+
+# Network filtering
+network:
+  blockedIps: []
+  # - "192.168.1.100"
+  blockedPorts: []
+  # - 22
+  # - 23
+
+# Logging
+logging:
+  level: "info"  # debug, info, warn, error
+
+# Resources
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+# Node selector - only run on nodes with LSM eBPF enabled
+nodeSelector:
+  nexus-axiom.io/lsm-enabled: "true"
+
+# Tolerations - run on all nodes including masters
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+
+# Host access - required for eBPF
+hostPID: true
+hostNetwork: true
+
+# Privileged mode - required for eBPF
+privileged: true
+
+# Service for metrics
+service:
+  enabled: true
+  type: ClusterIP
+  metricsPort: 9090
+  dashboardPort: 8080
+
+# ServiceMonitor for Prometheus Operator
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Grafana dashboard
+grafana:
+  enabled: false
+  dashboardConfigMap: nexus-axiom-dashboard

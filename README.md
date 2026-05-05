@@ -15,11 +15,32 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/CoderAwesomeAbhi/nexus-axiom/ci.yml?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/actions)
 [![Issues](https://img.shields.io/github/issues/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
 
-> **Most security tools watch attacks happen. Nexus Axiom terminates them.**
-
-[One-Command Install](#-one-command-install) • [Live Demo](#-live-demo) • [Features](#-features) • [Architecture](#-architecture) • [vs Falco/Tetragon](#-nexus-axiom-vs-the-competition) • [Verification](#-verification-proof) • [Troubleshooting](#-troubleshooting)
-
 </div>
+
+---
+
+## 30-Second Proof
+
+```bash
+# Without Nexus Axiom
+./exploit_pwnkit
+# Output: ALLOWED - W^X memory allocated (exploit succeeds)
+
+# With Nexus Axiom
+sudo systemctl start nexus-axiom
+./exploit_pwnkit
+# Output: Killed
+
+sudo journalctl -u nexus-axiom -n 5
+# Output: 🚨 EXPLOIT BLOCKED - Process terminated
+```
+
+**One command to verify:**
+```bash
+curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/proof.sh | sudo bash
+```
+
+**One limitation:** Only blocks W^X memory exploits. Won't stop ROP chains, kernel exploits, or side-channels. [See full list →](LIMITATIONS.md)
 
 ---
 
