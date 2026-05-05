@@ -40,7 +40,10 @@ jobs:
           sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev pkg-config libssl-dev libseccomp-dev linux-headers-$(uname -r)
 
       - name: Build release
-        run: cargo build --release
+        run: cargo build --release --verbose
+        env:
+          RUST_BACKTRACE: 1
+          CARGO_TERM_COLOR: never
 
       - name: Run tests
         run: cargo test

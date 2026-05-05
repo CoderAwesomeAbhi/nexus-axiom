@@ -184,7 +184,7 @@ impl EbpfEngine {
 /// Returns the container name (last path component) or "host" if not in a container.
 fn resolve_container(pid: u32, cgroup_id: u64) -> String {
     // Check cache first
-    if let Ok(mut cache) = CGROUP_CACHE.lock() {
+    if let Ok(cache) = CGROUP_CACHE.lock() {
         if let Some((name, timestamp)) = cache.get(&pid) {
             if timestamp.elapsed().as_secs() < CACHE_TTL_SECS {
                 return name.clone();

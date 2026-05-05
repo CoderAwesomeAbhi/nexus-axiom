@@ -28,8 +28,16 @@ fn main() {
             // Create stub skeleton that compiles but doesn't work
             let stub = r#"
 // Stub skeleton - eBPF compilation failed
+use libbpf_rs::skel::{OpenSkel, Skel};
+
 pub struct NexusWorkingSkel<'a> {
     _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+impl<'a> Skel for NexusWorkingSkel<'a> {
+    fn attach(&mut self) -> Result<(), anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available"))
+    }
 }
 
 pub struct NexusWorkingSkelBuilder;
@@ -46,8 +54,10 @@ impl NexusWorkingSkelBuilder {
 
 pub struct OpenNexusWorkingSkel;
 
-impl OpenNexusWorkingSkel {
-    pub fn load(self) -> Result<NexusWorkingSkel<'static>, anyhow::Error> {
+impl OpenSkel for OpenNexusWorkingSkel {
+    type Output = NexusWorkingSkel<'static>;
+    
+    fn load(self) -> Result<Self::Output, anyhow::Error> {
         Err(anyhow::anyhow!("eBPF skeleton not available"))
     }
 }
@@ -70,8 +80,16 @@ impl OpenNexusWorkingSkel {
             println!("cargo:warning=Creating stub skeleton for CI");
             let stub = r#"
 // Stub skeleton - eBPF compilation failed
+use libbpf_rs::skel::{OpenSkel, Skel};
+
 pub struct NexusNetSkel<'a> {
     _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+impl<'a> Skel for NexusNetSkel<'a> {
+    fn attach(&mut self) -> Result<(), anyhow::Error> {
+        Err(anyhow::anyhow!("eBPF skeleton not available"))
+    }
 }
 
 pub struct NexusNetSkelBuilder;
@@ -88,8 +106,10 @@ impl NexusNetSkelBuilder {
 
 pub struct OpenNexusNetSkel;
 
-impl OpenNexusNetSkel {
-    pub fn load(self) -> Result<NexusNetSkel<'static>, anyhow::Error> {
+impl OpenSkel for OpenNexusNetSkel {
+    type Output = NexusNetSkel<'static>;
+    
+    fn load(self) -> Result<Self::Output, anyhow::Error> {
         Err(anyhow::anyhow!("eBPF skeleton not available"))
     }
 }
