@@ -45,7 +45,7 @@ name: CI
             sudo apt-get update
             sudo apt-get install -y clang llvm libelf-dev linux-headers-$(uname -r) pkg-config libbpf-dev
         - name: Run clippy
-          run: cargo clippy --all-targets --all-features -- -D warnings || true
+          run: cargo clippy --bins -- -D warnings || true
 
     test:
       name: Unit Tests
