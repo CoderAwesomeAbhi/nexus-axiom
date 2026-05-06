@@ -147,7 +147,7 @@ Nexus Axiom:        syscall → [LSM hook fires] → -EPERM → syscall fails
 | Container-aware (cgroup_id) | ✅ | ✅ | ❌ | ❌ | ✅ |
 | One-command install | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Written in Rust | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Zero external runtime deps | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Zero config needed | ❌ | ❌ | ✅ | ✅ | ✅ |
 
 **The key difference:** Falco and Tetragon are excellent *observability* tools. Nexus Axiom is an *enforcement* tool. It doesn't just tell you an exploit happened — it prevents it.
 
@@ -164,7 +164,9 @@ These CVEs were tested against the included exploit harness in `cve_tests/`:
 | CVE-2022-0847 | Dirty Pipe | mprotect W^X | 💀 Process killed |
 | CVE-2022-0185 | Heap overflow (fs) | W^X mmap | 💀 Process killed |
 
-Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, return-to-libc, heap spraying, use-after-free exploitation.
+**What it blocks:** Exploits that require W^X memory (shellcode injection, JIT spraying, some heap overflows).
+
+**What it doesn't block:** ROP chains, return-to-libc, pure data-only attacks, kernel exploits, side-channels. [See full limitations →](LIMITATIONS.md)
 
 ---
 
@@ -189,7 +191,7 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| W^X Memory Blocking | ✅ **Implemented** | Tested with 12+ CVEs |
+| W^X Memory Blocking | ✅ **Implemented** | Tested with 3 major CVEs |
 | Dashboard & Metrics | ✅ **Production** | Fully functional, tested |
 | JSON Logging | ✅ **Production** | All formats working |
 | Kubernetes Support | ✅ **Production** | DaemonSet tested |
@@ -209,7 +211,7 @@ Plus generic technique coverage: JIT spraying, ROP chains, shellcode injection, 
 - FS protection uses inotify for real-time file monitoring
 - Performance benchmarks show actual measured latency
 
-**Honest assessment:** This is v1.0 with core features implemented and tested. W^X blocking works (tested with 12+ CVEs). Other features are functional but need more real-world testing. See [LIMITATIONS.md](LIMITATIONS.md) for what it doesn't do.
+**Honest assessment:** This is v1.0 with core features implemented and tested. W^X blocking works (tested with 3 major CVEs: PwnKit, Dirty Pipe, Sudo heap overflow). Other features are functional but need more real-world testing. See [LIMITATIONS.md](LIMITATIONS.md) for what it doesn't do.
 
 
 
