@@ -17,6 +17,15 @@
 
 </div>
 
+ ## 🎥 Live Demo
+
+  **See it in action - blocking real exploits:**
+
+  [![asciicast](https://asciinema.org/a/QEpVzhDNuDNDJyI7.svg)](https://asciinema.org/a/QEpVzhDNuDNDJyI7)
+
+  **Full feature walkthrough:**
+
+  [![asciicast](https://asciinema.org/a/lGEfNVEQC8RqY0aq.svg)](https://asciinema.org/a/lGEfNVEQC8RqY0aq)
 ---
 
 ## 30-Second Proof
