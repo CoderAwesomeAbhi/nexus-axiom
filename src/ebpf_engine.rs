@@ -81,7 +81,8 @@ impl EbpfEngine {
         skel.attach()?;
 
         // Set audit mode in eBPF config map
-        let config_map = skel.maps().config();
+        let maps = skel.maps();
+        let config_map = maps.config(); 
         let key: u32 = 0;
         let value: u8 = if self.audit_mode { 1 } else { 0 };
         config_map
@@ -112,10 +113,10 @@ impl EbpfEngine {
         let ai_analyst = self.ai_analyst.clone();
         let json_logger = self.json_logger.clone();
         let audit_mode = self.audit_mode;
-
+        let kill_on_violation = self.kill_on_violation;
         let worker = thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
-                handle_event(&event, &ai_analyst, &json_logger, audit_mode);
+                 handle_event(&event, &ai_analyst, &json_logger, audit_mode, kill_on_violation);
             }
         });
 
@@ -255,6 +256,7 @@ fn handle_event(
     ai_analyst: &Option<AIAnalyst>,
     json_logger: &Option<JsonLogger>,
     audit_mode: bool,
+    kill_on_violation: bool,
 ) {
     let mut comm = String::from_utf8_lossy(&event.comm)
         .trim_end_matches('\0')
@@ -316,7 +318,7 @@ fn handle_event(
             logger.log_event(&json_event);
         }
 
-        match if audit_mode || !self.kill_on_violation {
+         match if audit_mode || !kill_on_violation {
             log::warn!("📋 [AUDIT MODE] Would terminate process {}", event.pid);
             Ok(())
         } else {
@@ -324,12 +326,12 @@ fn handle_event(
         } {
             Ok(_) => println!(
                 "  Action    : {} PROCESS {}",
-                if audit_mode || !self.kill_on_violation {
+                if audit_mode || !kill_on_violation {
                     "📋"
                 } else {
                     "💀"
                 },
-                if audit_mode || !self.kill_on_violation {
+                if audit_mode || !kill_on_violation {
                     "WOULD BE TERMINATED"
                 } else {
                     "TERMINATED"
