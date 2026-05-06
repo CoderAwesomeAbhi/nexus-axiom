@@ -29,21 +29,54 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 }
-
 #[derive(Subcommand)]
-enum Commands {
-    /// Start real-time protection (requires root). Loads eBPF hooks and monitors for exploits.
-    Start {
-        /// Audit mode: log security events without blocking or killing processes
-        #[arg(long)]
-        audit: bool,
-    },
-    /// Monitor security events in real-time without starting full protection
-    Monitor,
-    /// Show system status and active protections
-    Status,
-}
 
+ enum Commands {
+      /// Start real-time protection (requires root). Loads eBPF hooks and monitors for exploits.
+      Start {
+          /// Audit mode: log security events without blocking or killing processes
+          #[arg(long)]
+          audit: bool,
+      },
+      /// Monitor security events in real-time without starting full protection
+      Monitor,
+      /// Show system status and active protections
+      Status,
+      /// Stream live security events (like tail -f)
+      Events,
+      /// Debug commands for troubleshooting
+      Debug {
+          #[command(subcommand)]
+          action: DebugAction,
+      },
+      /// Manage allowlist for processes that legitimately use W^X memory
+      Allowlist {
+          #[command(subcommand)]
+          action: AllowlistAction,
+      },
+}
+#[derive(Subcommand)]
+  enum DebugAction {
+      /// Dump current eBPF map contents
+      Maps,
+      /// Show daemon internal state
+      State,
+      /// Run diagnostic checks
+      Check,
+}
+ #[derive(Subcommand)]
+  enum AllowlistAction {
+      /// Add a process to the allowlist by PID
+      Add { pid: u32 },
+      /// Add a process to the allowlist by name
+      AddName { name: String },
+      /// Remove a process from the allowlist
+      Remove { pid: u32 },
+      /// List all allowlisted processes
+      List,
+      /// Clear the entire allowlist
+      Clear,
+}
 fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -53,6 +86,9 @@ fn main() -> Result<()> {
         Commands::Start { audit } => start_protection(audit),
         Commands::Monitor => monitor_events(),
         Commands::Status => show_status(),
+        Commands::Events => stream_events(),
+        Commands::Debug { action } => handle_debug(action),
+        Commands::Allowlist { action } => handle_allowlist(action),
     }
 }
 
@@ -250,3 +286,134 @@ fn show_status() -> Result<()> {
 
     Ok(())
 }
+
+  fn stream_events() -> Result<()> {
+      println!("📡 Streaming live security events (Ctrl+C to stop)\n");
+      println!("Feature requires daemon to be running with JSON logging enabled.");
+      println!("Check /var/log/nexus-axiom/events.json");
+      Ok(())
+}
+
+  fn handle_debug(action: DebugAction) -> Result<()> {
+      match action {
+          DebugAction::Check => {
+              println!("🔧 System Diagnostic Check\n");
+
+              if let Ok(version) = std::fs::read_to_string("/proc/version") {
+                  println!("✅ Kernel: {}", version.lines().next().unwrap_or("unknown"));
+              }
+
+              if let Ok(lsm) = std::fs::read_to_string("/sys/kernel/security/lsm") {
+                  if lsm.contains("bpf") {
+                      println!("✅ BPF LSM: Enabled");
+                  } else {
+                      println!("❌ BPF LSM: Not enabled (current: {})", lsm.trim());
+                  }
+              }
+
+              #[cfg(target_os = "linux")]
+              {
+                  if nix::unistd::Uid::effective().is_root() {
+                      println!("✅ Permissions: Running as root");
+                  } else {
+                      println!("❌ Permissions: Not root (required)");
+                  }
+              }
+          }
+          DebugAction::Maps => {
+              println!("🗺️  eBPF Map Contents\n");
+              println!("Run: sudo bpftool map list");
+          }
+          DebugAction::State => {
+              println!("🔍 Daemon Internal State\n");
+              println!("Check if running: pgrep nexus-axiom");
+          }
+      }
+      Ok(())
+}
+
+  fn handle_allowlist(action: AllowlistAction) -> Result<()> {
+      use std::fs;
+      use std::path::Path;
+
+      let allowlist_path = Path::new("/var/lib/nexus-axiom/allowlist.json");
+
+      if let Some(parent) = allowlist_path.parent() {
+          fs::create_dir_all(parent)?;
+      }
+
+      let mut allowlist: Vec<u32> = if allowlist_path.exists() {
+          let content = fs::read_to_string(allowlist_path)?;
+          let mut list: Vec<u32> = serde_json::from_str(&content).unwrap_or_default();
+          list.retain(|&pid| std::path::Path::new(&format!("/proc/{}", pid)).exists());
+          list
+      } else {
+          Vec::new()
+      };
+
+      match action {
+          AllowlistAction::Add { pid } => {
+              if !allowlist.contains(&pid) {
+                  allowlist.push(pid);
+                  fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
+                  println!("✅ Added PID {} to allowlist", pid);
+              } else {
+                  println!("ℹ️  PID {} already in allowlist", pid);
+              }
+          }
+          AllowlistAction::AddName { name } => {
+              let output = std::process::Command::new("pgrep").arg(&name).output()?;
+              if output.status.success() {
+                  let pids: Vec<u32> = String::from_utf8_lossy(&output.stdout)
+                      .lines()
+                      .filter_map(|line| line.parse().ok())
+                      .collect();
+
+                  if pids.is_empty() {
+                      anyhow::bail!("No processes found with name: {}", name);
+                  }
+
+                  for pid in &pids {
+                      if !allowlist.contains(pid) {
+                          allowlist.push(*pid);
+                      }
+                  }
+                  fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
+                  println!("✅ Added {} process(es) to allowlist: {:?}", pids.len(), pids);
+              } else {
+                  anyhow::bail!("No processes found with name: {}", name);
+              }
+          }
+          AllowlistAction::Remove { pid } => {
+              if let Some(pos) = allowlist.iter().position(|&x| x == pid) {
+                  allowlist.remove(pos);
+                  fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
+                  println!("✅ Removed PID {} from allowlist", pid);
+              } else {
+                  println!("ℹ️  PID {} not in allowlist", pid);
+              }
+          }
+          AllowlistAction::List => {
+              if allowlist.is_empty() {
+                  println!("Allowlist is empty");
+              } else {
+                  println!("Allowlisted PIDs:");
+                  for pid in allowlist {
+                      let name = std::fs::read_to_string(format!("/proc/{}/comm", pid))
+                          .unwrap_or_else(|_| "<unknown>".to_string())
+                          .trim()
+                          .to_string();
+                      println!("  {} - {}", pid, name);
+                  }
+              }
+          }
+          AllowlistAction::Clear => {
+              allowlist.clear();
+              fs::write(allowlist_path, "[]")?;
+              println!("✅ Cleared allowlist");
+          }
+      }
+
+      Ok(())
+}
+
