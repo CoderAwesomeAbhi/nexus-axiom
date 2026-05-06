@@ -233,10 +233,12 @@ fn resolve_container(pid: u32, cgroup_id: u64) -> String {
             let name = cgroup_path.split('/').next_back().unwrap_or("").to_string();
             if (derived_id == Some(cgroup_id)
                 || (!name.is_empty() && name != "." && cgroup_path != "/"))
-                && cgroup_path != "/" && !name.is_empty() {
-                    found = name;
-                    break;
-                }
+                && cgroup_path != "/"
+                && !name.is_empty()
+            {
+                found = name;
+                break;
+            }
         }
         found
     } else {
