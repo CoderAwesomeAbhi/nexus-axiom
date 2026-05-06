@@ -82,7 +82,7 @@ impl EbpfEngine {
 
         // Set audit mode in eBPF config map
         let maps = skel.maps();
-        let config_map = maps.config(); 
+        let config_map = maps.config();
         let key: u32 = 0;
         let value: u8 = if self.audit_mode { 1 } else { 0 };
         config_map
@@ -116,7 +116,13 @@ impl EbpfEngine {
         let kill_on_violation = self.kill_on_violation;
         let worker = thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
-                 handle_event(&event, &ai_analyst, &json_logger, audit_mode, kill_on_violation);
+                handle_event(
+                    &event,
+                    &ai_analyst,
+                    &json_logger,
+                    audit_mode,
+                    kill_on_violation,
+                );
             }
         });
 
@@ -224,15 +230,13 @@ fn resolve_container(pid: u32, cgroup_id: u64) -> String {
                 .split('/')
                 .filter_map(|s| u64::from_str_radix(s, 16).ok())
                 .next();
-            let name = cgroup_path.split('/').last().unwrap_or("").to_string();
-            if derived_id == Some(cgroup_id)
-                || (!name.is_empty() && name != "." && cgroup_path != "/")
-            {
-                if cgroup_path != "/" && !name.is_empty() {
+            let name = cgroup_path.split('/').next_back().unwrap_or("").to_string();
+            if (derived_id == Some(cgroup_id)
+                || (!name.is_empty() && name != "." && cgroup_path != "/"))
+                && cgroup_path != "/" && !name.is_empty() {
                     found = name;
                     break;
                 }
-            }
         }
         found
     } else {
@@ -318,7 +322,7 @@ fn handle_event(
             logger.log_event(&json_event);
         }
 
-         match if audit_mode || !kill_on_violation {
+        match if audit_mode || !kill_on_violation {
             log::warn!("📋 [AUDIT MODE] Would terminate process {}", event.pid);
             Ok(())
         } else {
