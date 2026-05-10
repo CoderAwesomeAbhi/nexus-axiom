@@ -121,6 +121,17 @@ done
 
 echo ""
 
+# ── Service Status ────────────────────────────────────────────────
+echo -e "${CYAN}[Service]${NC}"
+
+if systemctl is-active --quiet nexus-axiom 2>/dev/null; then
+    check "Service active" "pass" "nexus-axiom.service is running"
+else
+    check "Service active" "warn" "nexus-axiom.service is NOT running (expected if running manually)"
+fi
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────
 echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
 TOTAL=$((PASS + FAIL + WARN))

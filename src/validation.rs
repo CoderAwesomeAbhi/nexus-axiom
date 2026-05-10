@@ -134,6 +134,29 @@ impl Validator {
         
         Ok(())
     }
+
+    /// Check if system supports eBPF LSM
+    pub fn check_kernel_support() -> Result<()> {
+        #[cfg(target_os = "linux")]
+        {
+            use std::fs;
+            
+            // 1. Check if LSM BPF is enabled
+            if let Ok(lsm) = fs::read_to_string("/sys/kernel/security/lsm") {
+                if !lsm.contains("bpf") {
+                    bail!("BPF LSM not enabled. Add 'lsm=bpf' to kernel boot parameters.");
+                }
+            } else {
+                bail!("Could not read /sys/kernel/security/lsm. Are you root?");
+            }
+            
+            // 2. Check for BTF
+            if !std::path::Path::new("/sys/kernel/btf/vmlinux").exists() {
+                bail!("Kernel BTF not found (/sys/kernel/btf/vmlinux missing). Ensure CONFIG_DEBUG_INFO_BTF=y.");
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

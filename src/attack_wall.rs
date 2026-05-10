@@ -17,6 +17,7 @@ pub struct BlockedAttack {
 pub struct AttackWall {
     attacks: Arc<Mutex<Vec<BlockedAttack>>>,
     broadcast: broadcast::Sender<BlockedAttack>,
+    start_time: std::time::Instant,
 }
 
 impl AttackWall {
@@ -25,6 +26,7 @@ impl AttackWall {
         Self {
             attacks: Arc::new(Mutex::new(Vec::new())),
             broadcast: tx,
+            start_time: std::time::Instant::now(),
         }
     }
 
@@ -63,7 +65,7 @@ impl AttackWall {
         AttackStats {
             total_blocked: total,
             last_hour,
-            uptime_seconds: 0,  // TODO: track uptime
+            uptime_seconds: self.start_time.elapsed().as_secs(),
         }
     }
 }

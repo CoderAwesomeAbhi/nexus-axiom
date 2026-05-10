@@ -51,9 +51,10 @@ SEC("lsm/mmap_file")
 int mmap_file_hook(void *ctx)
 {
     unsigned long *args = ctx;
-    unsigned long prot = args[2];
+    unsigned long prot = args[1];
+    unsigned long maxprot = args[2];
     
-    if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+    if (((prot & PROT_WRITE) && (prot & PROT_EXEC)) || ((maxprot & PROT_WRITE) && (maxprot & PROT_EXEC))) {
         // Check allowlist first
         __u32 pid = bpf_get_current_pid_tgid() >> 32;
         __u8 *allowed = bpf_map_lookup_elem(&allowlist, &pid);

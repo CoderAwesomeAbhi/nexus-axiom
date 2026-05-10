@@ -186,6 +186,12 @@ fn start_protection(audit: bool, unprivileged: bool) -> Result<()> {
         anyhow::bail!("❌ Must run as root (sudo)");
     }
 
+    // Pre-flight check: Kernel support
+    if let Err(e) = validation::Validator::check_kernel_support() {
+        anyhow::bail!("❌ System readiness check failed: {}", e);
+    }
+    log::info!("✅ System readiness: eBPF LSM support verified");
+
     // 1. Initialize Filesystem Protection
     let mut fs_protection = FsProtection::new();
     if let Err(e) = fs_protection.start_monitoring() {

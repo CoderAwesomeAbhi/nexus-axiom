@@ -210,8 +210,8 @@
 ## Monitoring Points
 
 ### Health Checks
-- `/health` endpoint (TODO)
-- Metrics endpoint responding
+- `/health` endpoint
+- `/live_map` endpoint (WebSockets)
 - eBPF programs loaded
 - Ring buffer not full
 
