@@ -1,0 +1,36 @@
+image:
+  repository: ghcr.io/coderawesomeabhi/nexus-axiom
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# "audit" = log only, "enforce" = kill violators
+mode: audit
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+# Required for eBPF/LSM
+privileged: true
+hostPID: true
+hostNetwork: true
+
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+
+nodeSelector: {}
+
+service:
+  metricsPort: 9090
+  dashboardPort: 8080
+
+serviceMonitor:
+  enabled: false
+
+logging:
+  level: info

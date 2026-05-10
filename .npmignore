@@ -1,0 +1,120 @@
+# Build artifacts
+target/
+*.o
+*.so
+*.a
+*.bpf.o
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+tests/
+cve_tests/
+examples/
+benchmarks/
+
+# Documentation (keep only essential)
+docs/
+*.cast
+demo.cast
+exploit-demo.cast
+exploit-blocked.cast
+
+# Scripts (keep only NPM-related)
+*.sh
+!bin/*.sh
+demo.sh
+record_demo.sh
+install.sh
+uninstall.sh
+proof.sh
+run.sh
+test_*.sh
+verify_*.sh
+wsl2-setup.sh
+preflight-check.sh
+
+# Rust source (not needed for NPM)
+src/
+ebpf/
+Cargo.toml
+Cargo.lock
+build.rs
+config.toml
+
+# Build configs
+Makefile
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Kubernetes/Helm (users should get from GitHub)
+deploy/
+helm/
+
+# Monitoring configs
+grafana/
+
+# Markdown docs (keep only essential)
+ABSOLUTELY_PERFECT.md
+ACTION_PLAN.md
+ALL_PHASES_COMPLETE.md
+ARCHITECTURE_DIAGRAM.md
+BENCHMARK_REPORT.md
+BENCHMARK_RESULTS.md
+BRUTAL_HONEST_GAPS.md
+BRUTAL_REALITY.md
+CHALLENGE.md
+CODE_VERIFICATION_REPORT.md
+COMPILATION_FIXES.md
+COMPILATION_STATUS.md
+COMPLETE_FIX_LINUX.sh
+COMPLETE_SETUP.md
+COMPLETION_SUMMARY.md
+COMPREHENSIVE_EDIT_REVIEW.md
+DOCKER_QUICKSTART.md
+DOCS_INDEX.md
+FAQ.md
+FIXES_COMPLETE.md
+FIXES_STATUS.md
+LAUNCH_GUIDE.md
+LIMITATIONS.md
+PRODUCTION.md
+PRODUCTION_CHECKLIST.md
+QUICK_FIX.md
+QUICK_REFERENCE.md
+QUICK_START.md
+READY_FOR_LAUNCH.md
+REAL_CODE_PROBLEMS.md
+README_PERFECT.md
+README_UPDATE.md
+RUN_TESTS.md
+TESTING_GUIDE.md
+TESTING_STEPS.md
+UBUNTU_VM_TEST_GUIDE.md
+VERIFICATION.md
+VERIFICATION_GUIDE.md
+WHY_LSM.md
+WHY_NOT_7K_STARS.md
+WHY_WSL2_DOESNT_WORK.md
+2K_STAR_STRATEGY.md
+
+# Test artifacts
+test_exploit
+test_exploit.c
+
+# Assets (keep logo, exclude others)
+assets/demo.svg
+assets/demo.cast
+
+# Misc
+.well-known/
+dashboard.html
+*.backup

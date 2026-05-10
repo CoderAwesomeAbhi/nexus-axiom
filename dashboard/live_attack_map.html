@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Axiom - Live Attack Map 🛡️</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1e3f 100%);
+            color: #00ff88;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #globe-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        #stats-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+            min-width: 350px;
+            backdrop-filter: blur(10px);
+        }
+        
+        #stats-panel h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(0, 255, 136, 0.8); }
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            font-size: 16px;
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.05);
+            border-radius: 5px;
+        }
+        
+        .stat-label {
+            color: #888;
+        }
+        
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+            font-size: 24px;
+            text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+        }
+        
+        .stat-value.danger {
+            color: #ff0044;
+            text-shadow: 0 0 5px rgba(255, 0, 68, 0.5);
+        }
+        
+        #attack-feed {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 14, 39, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #ff0044;
+            box-shadow: 0 0 30px rgba(255, 0, 68, 0.3);
+            min-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        #attack-feed h2 {
+            font-size: 22px;
+            margin-bottom: 20px;
+            color: #ff0044;
+            text-shadow: 0 0 10px rgba(255, 0, 68, 0.5);
+        }
+        
+        .attack-item {
+            background: rgba(255, 0, 68, 0.1);
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ff0044;
+            animation: slideIn 0.4s ease-out;
+            transition: all 0.3s;
+        }
+        
+        .attack-item:hover {
+            background: rgba(255, 0, 68, 0.2);
+            transform: translateX(-5px);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .attack-type {
+            color: #ff0044;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .attack-details {
+            font-size: 13px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+        
+        .attack-time {
+            color: #666;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        
+        #footer {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        #footer a {
+            color: #00ff88;
+            text-decoration: none;
+        }
+        
+        #footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        
+        #connection-status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        #connection-status.disconnected {
+            background: rgba(255, 0, 68, 0.2);
+            border-color: #ff0044;
+            color: #ff0044;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00cc6a;
+        }
+    </style>
+</head>
+<body>
+    <div id="globe-container"></div>
+    
+    <div id="connection-status">🟢 Connected to Nexus Axiom</div>
+    
+    <div id="stats-panel">
+        <h1>🛡️ NEXUS AXIOM</h1>
+        <div class="stat-row">
+            <span class="stat-label">Total Blocks:</span>
+            <span class="stat-value" id="total-blocks">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Last Hour:</span>
+            <span class="stat-value" id="hour-blocks">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Active Now:</span>
+            <span class="stat-value danger pulse" id="active-now">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Uptime:</span>
+            <span class="stat-value" id="uptime">0s</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Threat Level:</span>
+            <span class="stat-value" id="threat-level">LOW</span>
+        </div>
+    </div>
+    
+    <div id="attack-feed">
+        <h2>🚨 LIVE ATTACK FEED</h2>
+        <div id="attack-list"></div>
+    </div>
+    
+    <div id="footer">
+        <p>Built by an 8th grader | <a href="https://github.com/CoderAwesomeAbhi/nexus-axiom" target="_blank">GitHub</a> | Open Source</p>
+    </div>
+    
+    <script>
+        // WebSocket connection
+        let ws;
+        let totalBlocks = 0;
+        let hourBlocks = 0;
+        let activeNow = 0;
+        let startTime = Date.now();
+        let reconnectAttempts = 0;
+        
+        // Three.js globe setup
+        let scene, camera, renderer, globe;
+        
+        function initGlobe() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('globe-container').appendChild(renderer.domElement);
+            
+            // Create globe
+            const geometry = new THREE.SphereGeometry(5, 50, 50);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00ff88,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.3
+            });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+            
+            // Add particles for stars
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 5000;
+            const posArray = new Float32Array(particlesCount * 3);
+            
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 100;
+            }
+            
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0x00ff88
+            });
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+            
+            camera.position.z = 15;
+            
+            animate();
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            globe.rotation.y += 0.002;
+            renderer.render(scene, camera);
+        }
+        
+        function connect() {
+            const status = document.getElementById('connection-status');
+            status.textContent = '🟡 Connecting...';
+            status.className = '';
+            
+            ws = new WebSocket('ws://localhost:8080/ws');
+            
+            ws.onopen = () => {
+                console.log('Connected to Nexus Axiom');
+                status.textContent = '🟢 Connected to Nexus Axiom';
+                status.className = '';
+                reconnectAttempts = 0;
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleAttack(data);
+                } catch (e) {
+                    console.error('Failed to parse message:', e);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('Disconnected from Nexus Axiom');
+                status.textContent = '🔴 Disconnected - Reconnecting...';
+                status.className = 'disconnected';
+                
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                setTimeout(connect, delay);
+            };
+        }
+        
+        function handleAttack(data) {
+            totalBlocks++;
+            hourBlocks++;
+            activeNow++;
+            
+            // Update stats
+            document.getElementById('total-blocks').textContent = totalBlocks.toLocaleString();
+            document.getElementById('hour-blocks').textContent = hourBlocks.toLocaleString();
+            document.getElementById('active-now').textContent = activeNow;
+            
+            // Update threat level
+            const threatLevel = hourBlocks > 100 ? 'CRITICAL' : hourBlocks > 50 ? 'HIGH' : hourBlocks > 10 ? 'MEDIUM' : 'LOW';
+            const threatEl = document.getElementById('threat-level');
+            threatEl.textContent = threatLevel;
+            threatEl.className = 'stat-value ' + (threatLevel === 'CRITICAL' || threatLevel === 'HIGH' ? 'danger' : '');
+            
+            // Add to feed
+            addAttackToFeed(data);
+            
+            // Visual effect on globe
+            flashGlobe();
+            
+            // Reset active counter
+            setTimeout(() => {
+                activeNow = Math.max(0, activeNow - 1);
+                document.getElementById('active-now').textContent = activeNow;
+            }, 2000);
+        }
+        
+        function addAttackToFeed(data) {
+            const feed = document.getElementById('attack-list');
+            
+            const item = document.createElement('div');
+            item.className = 'attack-item';
+            
+            const type = data.event_type || 'W^X Memory Exploit';
+            const process = data.comm || 'unknown';
+            const pid = data.pid || '?';
+            const time = new Date().toLocaleTimeString();
+            
+            item.innerHTML = `
+                <div class="attack-type">🚨 ${type}</div>
+                <div class="attack-details">
+                    <strong>Process:</strong> ${process} (PID: ${pid})<br>
+                    <strong>Action:</strong> ✅ BLOCKED AT KERNEL LEVEL<br>
+                    <strong>Status:</strong> 💀 Process Terminated
+                </div>
+                <div class="attack-time">${time}</div>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+            
+            // Keep only last 50 attacks
+            while (feed.children.length > 50) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+        
+        function flashGlobe() {
+            if (globe) {
+                globe.material.opacity = 0.8;
+                globe.material.color.setHex(0xff0044);
+                
+                setTimeout(() => {
+                    globe.material.opacity = 0.3;
+                    globe.material.color.setHex(0x00ff88);
+                }, 200);
+            }
+        }
+        
+        // Update uptime
+        setInterval(() => {
+            const uptime = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(uptime / 3600);
+            const minutes = Math.floor((uptime % 3600) / 60);
+            const seconds = uptime % 60;
+            
+            document.getElementById('uptime').textContent = 
+                `${hours}h ${minutes}m ${seconds}s`;
+        }, 1000);
+        
+        // Reset hourly counter
+        setInterval(() => {
+            hourBlocks = 0;
+            document.getElementById('hour-blocks').textContent = '0';
+        }, 3600000);
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Initialize
+        initGlobe();
+        connect();
+        
+        // Demo mode: simulate attacks if no real connection after 10 seconds
+        setTimeout(() => {
+            if (totalBlocks === 0) {
+                console.log('Demo mode: simulating attacks');
+                setInterval(() => {
+                    const demoAttack = {
+                        event_type: ['W^X mmap', 'W^X mprotect', 'Ptrace Attempt', 'Shellcode Injection'][Math.floor(Math.random() * 4)],
+                        comm: ['exploit', 'malware.bin', 'shellcode', 'pwn', 'backdoor'][Math.floor(Math.random() * 5)],
+                        pid: Math.floor(Math.random() * 10000) + 1000
+                    };
+                    handleAttack(demoAttack);
+                }, 2000 + Math.random() * 3000);
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  nexus-axiom:
+    build: .
+    container_name: nexus-axiom
+    privileged: true
+    network_mode: host
+    volumes:
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+      - /sys/fs/bpf:/sys/fs/bpf
+      - /sys/kernel/btf:/sys/kernel/btf:ro
+    environment:
+      - RUST_LOG=info
+    ports:
+      - "8080:8080"  # Dashboard
+      - "9090:9090"  # Metrics
+    restart: unless-stopped

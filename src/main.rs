@@ -19,6 +19,53 @@ pub mod metrics;
 pub mod net_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_engine;
+#[cfg(target_os = "linux")]
+pub mod seccomp_mode;
+#[cfg(target_os = "linux")]
+pub mod dpu_offload;
+#[cfg(target_os = "linux")]
+pub mod allowlist_kernel;
+#[cfg(target_os = "linux")]
+pub mod incident_bundle;
+#[cfg(target_os = "linux")]
+pub mod replay_engine;
+#[cfg(all(target_os = "linux", feature = "quantum"))]
+pub mod quantum_crypto;
+#[cfg(target_os = "linux")]
+pub mod policy_dsl;
+#[cfg(target_os = "linux")]
+pub mod telemetry;
+#[cfg(target_os = "linux")]
+pub mod autopilot;
+#[cfg(target_os = "linux")]
+pub mod correlation;
+#[cfg(target_os = "linux")]
+pub mod containment;
+#[cfg(target_os = "linux")]
+pub mod self_protection;
+#[cfg(target_os = "linux")]
+pub mod attack_wall;
+#[cfg(target_os = "linux")]
+pub mod live_feed;
+#[cfg(target_os = "linux")]
+pub mod rbac;
+#[cfg(target_os = "linux")]
+pub mod integrations;
+#[cfg(target_os = "linux")]
+pub mod advanced_detection;
+#[cfg(target_os = "linux")]
+pub mod compliance;
+#[cfg(target_os = "linux")]
+pub mod database;
+#[cfg(target_os = "linux")]
+pub mod validation;
+#[cfg(target_os = "linux")]
+pub mod ml_predictor;
+
+#[cfg(target_os = "linux")]
+pub mod audit;
+#[cfg(target_os = "linux")]
+pub mod compliance_checks;
 
 #[derive(Parser)]
 #[command(name = "nexus-axiom")]
@@ -37,6 +84,10 @@ enum Commands {
         /// Audit mode: log security events without blocking or killing processes
         #[arg(long)]
         audit: bool,
+        
+        /// Unprivileged mode: use seccomp user notification (no root required)
+        #[arg(long)]
+        unprivileged: bool,
     },
     /// Monitor security events in real-time without starting full protection
     Monitor,
@@ -83,7 +134,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start { audit } => start_protection(audit),
+        Commands::Start { audit, unprivileged } => start_protection(audit, unprivileged),
         Commands::Monitor => monitor_events(),
         Commands::Status => show_status(),
         Commands::Events => stream_events(),
@@ -93,7 +144,7 @@ fn main() -> Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn start_protection(audit: bool) -> Result<()> {
+fn start_protection(audit: bool, unprivileged: bool) -> Result<()> {
     use anyhow::Context;
     use ebpf_engine::EbpfEngine;
     use fs_protection::FsProtection;
@@ -105,6 +156,15 @@ fn start_protection(audit: bool) -> Result<()> {
 
     println!("\n🛡️  NEXUS AXIOM v{}", env!("CARGO_PKG_VERSION"));
     println!("{}", "=".repeat(70));
+    
+    if unprivileged {
+        println!("🔓 Starting in UNPRIVILEGED MODE (no root required)");
+        println!("   Apps connect with: LD_PRELOAD=libnexus-client.so ./app\n");
+        
+        let mut seccomp_mode = seccomp_mode::SeccompMode::new();
+        return seccomp_mode.start_listener();
+    }
+    
     println!("🟢 Starting Real-Time Protection...\n");
 
     // Load config
@@ -143,6 +203,7 @@ fn start_protection(audit: bool) -> Result<()> {
     }
 
     // 3. Start Dashboard
+    live_feed::init(); // must be called before dashboard (WS server subscribes to it)
     let dashboard = dashboard::Dashboard::new(metrics.clone());
     if let Err(e) = dashboard.start(config.server.dashboard_port) {
         log::warn!("⚠️  Dashboard failed to start: {}", e);
@@ -154,12 +215,17 @@ fn start_protection(audit: bool) -> Result<()> {
         audit_mode,
         config.security.kill_on_violation,
     )?;
-    let mut net_engine = NetEngine::new()?;
+    let mut net_engine = NetEngine::with_metrics(metrics.clone())?;
 
     // Load and attach eBPF programs
     engine
         .load_and_attach()
         .context("Failed to load eBPF LSM programs")?;
+
+    // Load allowlist from disk and sync to kernel
+    if let Err(e) = engine.load_allowlist_from_disk() {
+        log::warn!("⚠️  Failed to load allowlist: {}", e);
+    }
 
     net_engine
         .load_and_attach()
@@ -208,7 +274,6 @@ fn start_protection(audit: bool) -> Result<()> {
     println!("   • W^X memory blocking (LSM)");
     println!("   • Network filtering (XDP)");
     println!("   • Filesystem protection");
-    println!("   • AI threat analysis");
     println!("   • JSON event logging");
     println!("\n⚠️  Press Ctrl+C to stop\n");
 
@@ -216,18 +281,27 @@ fn start_protection(audit: bool) -> Result<()> {
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     ctrlc::set_handler(move || {
+        log::info!("🛑 Received SIGINT, shutting down gracefully...");
         r.store(false, Ordering::SeqCst);
     })?;
 
     // Process events
     engine.process_events(running, &mut fs_protection)?;
 
-    println!("\n✅ Nexus Axiom stopped");
+    // Explicit cleanup for graceful shutdown
+    drop(engine);
+    drop(net_engine);
+    drop(seccomp);
+    drop(fs_protection);
+    drop(metrics);
+    // dashboard runs in its own thread, but resources will drop on process exit
+
+    println!("\n✅ Nexus Axiom stopped cleanly");
     Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]
-fn start_protection(_audit: bool) -> Result<()> {
+fn start_protection(_audit: bool, _unprivileged: bool) -> Result<()> {
     anyhow::bail!("Nexus Axiom only runs on Linux");
 }
 
@@ -356,6 +430,12 @@ fn handle_allowlist(action: AllowlistAction) -> Result<()> {
             if !allowlist.contains(&pid) {
                 allowlist.push(pid);
                 fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
+                
+                #[cfg(target_os = "linux")]
+                {
+                    let _ = allowlist_kernel::AllowlistKernel::add_to_map(pid);
+                }
+                
                 println!("✅ Added PID {} to allowlist", pid);
             } else {
                 println!("ℹ️  PID {} already in allowlist", pid);
@@ -392,6 +472,12 @@ fn handle_allowlist(action: AllowlistAction) -> Result<()> {
             if let Some(pos) = allowlist.iter().position(|&x| x == pid) {
                 allowlist.remove(pos);
                 fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
+                
+                #[cfg(target_os = "linux")]
+                {
+                    let _ = allowlist_kernel::AllowlistKernel::remove_from_map(pid);
+                }
+                
                 println!("✅ Removed PID {} from allowlist", pid);
             } else {
                 println!("ℹ️  PID {} not in allowlist", pid);

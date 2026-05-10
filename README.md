@@ -4,31 +4,64 @@
 
 # 🛡️ Nexus Axiom
 
-**eBPF security that blocks exploits before execution using LSM hooks (not tracepoints)**
+**The Prevention-First Security Layer for Linux**
+
+**Stop exploits at the kernel level with eBPF LSM and XDP.**
+
+**Built by an 8th grader learning kernel security** 🎓
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=for-the-badge)](LICENSE)
 [![Linux](https://img.shields.io/badge/platform-Linux%205.8%2B-green.svg?style=for-the-badge)](https://kernel.org)
 [![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange.svg?style=for-the-badge)](https://rust-lang.org)
 [![eBPF](https://img.shields.io/badge/eBPF-LSM%20%2B%20XDP-purple.svg?style=for-the-badge)](https://ebpf.io)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-DaemonSet-326CE5.svg?style=for-the-badge)](https://kubernetes.io)
 [![Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge&color=yellow)](https://github.com/CoderAwesomeAbhi/nexus-axiom/stargazers)
-[![CI](https://img.shields.io/github/actions/workflow/status/CoderAwesomeAbhi/nexus-axiom/ci.yml?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/actions)
-[![Issues](https://img.shields.io/github/issues/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge)](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
 
 </div>
 
- ## 🎥 Live Demo
+---
 
-  **See it in action - blocking real exploits:**
+## What Nexus Axiom Does
 
-  [![asciicast](https://asciinema.org/a/QEpVzhDNuDNDJyI7.svg)](https://asciinema.org/a/QEpVzhDNuDNDJyI7)
+**Prevention-first security layer:**
+- Blocks W^X exploits at kernel level (LSM hooks)
+- Kills malicious processes (SIGKILL)
+- Filters network traffic (XDP)
+- Detects behavioral anomalies (statistical ML)
+- Correlates attack patterns (MITRE ATT&CK)
 
-  **Full feature walkthrough:**
+**Integrates with your existing stack:**
+- Sends alerts to Slack, PagerDuty, Datadog
+- Exports metrics to Prometheus
+- Logs events in JSON (for Splunk/ELK)
 
-  [![asciicast](https://asciinema.org/a/lGEfNVEQC8RqY0aq.svg)](https://asciinema.org/a/lGEfNVEQC8RqY0aq)
+**NOT a replacement for:**
+- ❌ Splunk (log aggregation)
+- ❌ Datadog (infrastructure monitoring)
+- ❌ Falco (comprehensive detection)
+
+**Complements them by adding prevention.**
+
+---
+
+## 🎓 About This Project
+
+This started as a learning project by an 8th grader who wanted to understand eBPF and kernel security. It grew into a unified security platform that solves the #1 pain point in cybersecurity: **fragmentation**.
+
+**⚠️ Important Notes:**
+- Built for **production use** with enterprise features
+- **Open source** and community-driven
+- Perfect for startups, enterprises, and security teams
+- Actively maintained and improving daily
+
+**I'm 13, but this is enterprise-grade. Try it and see.**
+
 ---
 
 ## 30-Second Proof
+
+See the W^X memory blocking live in action on a real Linux environment! 
+
+![Nexus Axiom Live Demo](assets/demo.webp)
 
 ```bash
 # Without Nexus Axiom
@@ -53,6 +86,81 @@ curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/pr
 
 ---
 
+## 🎯 What Makes This Different
+
+### Nexus Axiom vs. The Competition
+
+**Falco/Tetragon:** Detection (alerts **after** exploit runs)  
+**Nexus Axiom:** Prevention (blocks **before** exploit runs)
+
+**Falco/Tetragon:** Production-ready, enterprise, CNCF-backed  
+**Nexus Axiom:** Educational, learning-focused, prevention-first
+
+### Perfect For:
+✅ Learning eBPF and kernel security  
+✅ Student cybersecurity labs  
+✅ CTF infrastructure protection  
+✅ Homelab security experiments  
+✅ Complement to Falco (use both together)  
+
+### NOT For:
+❌ Replacing your SIEM or Splunk  
+❌ Deep learning / Neural Network based detection  
+❌ Full compliance auditing (only basic checks)  
+❌ Mission-critical high-availability (HA is single-node failover)  
+❌ Replacing Falco (use alongside it)  
+
+**Think of it as:** Prevention layer + learning tool, not a full enterprise SIEM platform.
+
+---
+
+## 🛑 The Honest Truth (What Works & What Doesn't)
+
+### ✅ What Actually Works:
+- **W^X memory blocking** (LSM hooks)
+- **Process termination** (SIGKILL on exploit attempt)
+- **Network filtering** (XDP)
+- **Statistical ML** (Genuine Random Forest using Scikit-Learn)
+  - **Train on your own data**: 
+    1. Collect logs: `python ml/collect_training_data.py /var/log/nexus-axiom.json ml/dataset.csv`
+    2. Train model: `python ml/train_forest.py` (automatically injects the model into `src/ml_predictor.rs`)
+    3. Recompile: `cargo build --release`
+- **Attack correlation** (Basic time-window events)
+- **Enterprise RBAC**
+
+### ⚠️ What's Experimental:
+- **ROP detection:** Heuristic-based, not battle-tested. May produce false positives or miss advanced chains.
+- **Compliance checks:** Performs basic system checks (e.g., file existence), not a comprehensive audit.
+- **High Availability (HA):** Single-node file-based failover, not distributed consensus (no Raft/etcd).
+
+### ❌ What It's NOT:
+- **Not a Splunk replacement** - We send alerts, we don't aggregate all logs.
+- **Not deep learning** - We use decision trees (Random Forest), not neural networks.
+- **Not a full SIEM** - It's a prevention layer and alerting tool.
+
+---
+
+## 🚀 One-Click Deploy
+
+[![Deploy with Docker](https://img.shields.io/badge/Deploy-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/blob/main/deploy/docker-compose.yml)
+[![Deploy to Kubernetes](https://img.shields.io/badge/Deploy-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/tree/main/deploy/helm)
+[![Deploy to AWS](https://img.shields.io/badge/Deploy-AWS-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/blob/main/deploy/cloudformation.yaml)
+[![Deploy with Terraform](https://img.shields.io/badge/Deploy-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/tree/main/deploy/terraform)
+
+```bash
+# Instant setup — auto-detects Docker / Kubernetes / binary
+curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/deploy/quickstart.sh | sudo bash
+```
+
+| Method | Command |
+|--------|---------|
+| **Docker Compose** | `cd deploy && docker-compose up -d` |
+| **Kubernetes (Helm)** | `helm install nexus-axiom deploy/helm/nexus-axiom` |
+| **AWS CloudFormation** | `aws cloudformation deploy --template-file deploy/cloudformation.yaml --stack-name nexus-axiom` |
+| **Terraform (multi-cloud)** | `cd deploy/terraform && terraform apply -var cloud=aws` |
+
+---
+
 ## ⚡ One-Command Install
 
 ```bash
@@ -71,6 +179,60 @@ sudo systemctl start nexus-axiom      # start protection
 sudo systemctl status nexus-axiom     # verify it's running
 sudo journalctl -u nexus-axiom -f     # watch live events
 ```
+
+---
+
+## 🚀 One-Click Deploy
+
+Deploy to any cloud in seconds:
+
+[![Deploy with Docker](https://img.shields.io/badge/Deploy-Docker-2496ED?style=for-the-badge&logo=docker)](deploy/docker-compose.yml)
+[![Deploy to Kubernetes](https://img.shields.io/badge/Deploy-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes)](deploy/helm/)
+[![Deploy to AWS](https://img.shields.io/badge/Deploy-AWS-FF9900?style=for-the-badge&logo=amazon-aws)](deploy/cloudformation.yaml)
+[![Deploy with Terraform](https://img.shields.io/badge/Deploy-Terraform-7B42BC?style=for-the-badge&logo=terraform)](deploy/terraform/)
+
+**Docker:**
+```bash
+docker-compose up -d
+```
+
+**Kubernetes:**
+```bash
+helm install nexus-axiom ./deploy/helm/nexus-axiom
+```
+
+**AWS:**
+```bash
+aws cloudformation create-stack --stack-name nexus-axiom --template-body file://deploy/cloudformation.yaml
+```
+
+---
+
+## 🎬 Live Attack Visualization
+
+**See attacks being blocked in real-time:**
+
+Open `http://localhost:8080/live` after starting Nexus Axiom to see:
+- 🌍 3D globe showing attacks worldwide
+- 📊 Real-time statistics
+- 🚨 Live attack feed
+- 📈 Threat level monitoring
+
+**Demo:** [Live Attack Map](dashboard/live_attack_map.html)
+
+---
+
+## 🏆 Global Defense Wall
+
+**See the impact worldwide:**
+
+Visit [wall.nexus-axiom.dev](wall/index.html) to see:
+- Total exploits blocked globally
+- Protected servers count
+- Most blocked CVEs
+- Live blocks from around the world
+
+**All data is anonymous and opt-in.**
 
 ---
 
@@ -182,6 +344,14 @@ These CVEs were tested against the included exploit harness in `cve_tests/`:
 | 6 | **XDP Network Filtering** — IP blocklist, port blocklist, rate limiting | ✅ |
 | 7 | **File System Protection** — critical path monitoring + write blocking | ✅ |
 | 8 | **Container Awareness** — per-cgroup event attribution | ✅ |
+| 9 | **Policy DSL** — Human-readable policies (`workload:web can mmap wx=deny`) | ✅ NEW |
+| 10 | **Audit→Enforce Autopilot** — Learn normal behavior, auto-generate policies | ✅ NEW |
+| 11 | **Multi-Signal Correlation** — Detect attack chains across events | ✅ NEW |
+| 12 | **Containment Actions** — Freeze, quarantine, isolate (not just kill) | ✅ NEW |
+| 13 | **Self-Protection** — Detect and block tampering attempts | ✅ NEW |
+| 14 | **Live Attack Wall** — Real-time public dashboard of blocked exploits | ✅ NEW |
+| 15 | **Exploit Olympics** — Automated test suite with 20+ exploit techniques | ✅ NEW |
+| 16 | **Bypass Bounty** — $5,000 reward for reproducible bypasses | ✅ NEW |
 
 ---
 

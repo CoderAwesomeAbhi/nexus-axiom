@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use crate::ai_analyst::AIAnalyst;
 use crate::json_logger::JsonLogger;
+use crate::ml_predictor::{MlPredictor, ThreatLevel};
 
 // Cache for cgroup resolution (pid -> (container_name, timestamp))
 lazy_static::lazy_static! {
@@ -48,6 +49,7 @@ pub struct EbpfEngine {
     metrics: Arc<crate::metrics::MetricsServer>,
     ai_analyst: Option<AIAnalyst>,
     json_logger: Option<JsonLogger>,
+    ml_predictor: Arc<MlPredictor>,
     audit_mode: bool,
     kill_on_violation: bool,
 }
@@ -69,6 +71,7 @@ impl EbpfEngine {
             metrics,
             ai_analyst,
             json_logger,
+            ml_predictor: Arc::new(MlPredictor::new()),
             audit_mode,
             kill_on_violation,
         })
@@ -97,6 +100,39 @@ impl EbpfEngine {
         Ok(())
     }
 
+    /// Load allowlist from disk and sync to kernel map
+    pub fn load_allowlist_from_disk(&self) -> Result<()> {
+        use std::path::Path;
+        
+        let allowlist_path = Path::new("/var/lib/nexus-axiom/allowlist.json");
+        
+        if !allowlist_path.exists() {
+            log::debug!("No allowlist file found, skipping");
+            return Ok(());
+        }
+        
+        let content = std::fs::read_to_string(allowlist_path)?;
+        let pids: Vec<u32> = serde_json::from_str(&content)?;
+        
+        let mut loaded = 0;
+        for pid in pids {
+            // Check if process still exists
+            if std::path::Path::new(&format!("/proc/{}", pid)).exists() {
+                if let Err(e) = crate::allowlist_kernel::AllowlistKernel::add_to_map(pid) {
+                    log::warn!("Failed to add PID {} to kernel map: {}", pid, e);
+                } else {
+                    loaded += 1;
+                }
+            }
+        }
+        
+        if loaded > 0 {
+            log::info!("✅ Loaded {} PIDs from allowlist into kernel map", loaded);
+        }
+        
+        Ok(())
+    }
+
     pub fn process_events(
         &self,
         running: Arc<AtomicBool>,
@@ -114,12 +150,14 @@ impl EbpfEngine {
         let json_logger = self.json_logger.clone();
         let audit_mode = self.audit_mode;
         let kill_on_violation = self.kill_on_violation;
+        let ml_predictor = self.ml_predictor.clone();
         let worker = thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
                 handle_event(
                     &event,
                     &ai_analyst,
                     &json_logger,
+                    &ml_predictor,
                     audit_mode,
                     kill_on_violation,
                 );
@@ -261,6 +299,7 @@ fn handle_event(
     event: &Event,
     ai_analyst: &Option<AIAnalyst>,
     json_logger: &Option<JsonLogger>,
+    ml_predictor: &Arc<MlPredictor>,
     audit_mode: bool,
     kill_on_violation: bool,
 ) {
@@ -274,6 +313,38 @@ fn handle_event(
         comm = format!("<pid-{}>", event.pid);
     }
 
+    // ── ML Behavior Tracking & Prediction ────────────────────────────────────
+    let prediction = ml_predictor.record_and_predict(
+        event.pid,
+        event.uid,
+        event.event_type,
+        event.prot,
+        event.blocked == 1,
+    );
+
+    // Emit "Predicted Attack" alert if confidence is high even before a block
+    if let Some(ref pred) = prediction {
+        if pred.threat_level.is_alert_worthy() && event.blocked == 0 {
+            log::warn!(
+                "🔮 PREDICTED ATTACK — {} (PID: {}) | {:.0}% confidence | {} | source: {:?}",
+                comm, event.pid,
+                pred.confidence * 100.0,
+                pred.attack_type,
+                pred.source,
+            );
+            // Broadcast predicted attack to live dashboard
+            crate::live_feed::broadcast(crate::live_feed::make_event(
+                "predicted",
+                &pred.attack_type,
+                event.pid,
+                event.uid,
+                &comm,
+                &format!("confidence={:.0}% threat={}", pred.confidence * 100.0, pred.threat_level.as_str()),
+                "",
+            ));
+        }
+    }
+
     if event.blocked == 1 {
         let event_label = match event.event_type {
             EVENT_TYPE_MMAP => "W^X mmap",
@@ -281,6 +352,17 @@ fn handle_event(
             EVENT_TYPE_PTRACE => "Unauthorized ptrace",
             _ => "unknown",
         };
+
+        // ── Broadcast to live attack map ──────────────────────────────────────
+        crate::live_feed::broadcast(crate::live_feed::make_event(
+            "block",
+            event_label,
+            event.pid,
+            event.uid,
+            &comm,
+            &format!("prot=0x{:02x} flags=0x{:02x}", event.prot, event.flags),
+            "", // src_ip: kernel exploits are local; geolocation picks a demo city
+        ));
 
         let container_name = resolve_container(event.pid, event.cgroup_id);
 
@@ -294,6 +376,14 @@ fn handle_event(
         );
         println!("  Hook      : {}", event_label);
         println!("  prot=0x{:02x}  flags=0x{:02x}", event.prot, event.flags);
+        if let Some(ref pred) = prediction {
+            println!(
+                "  AI Predict: {:.0}% confidence | {} | {}",
+                pred.confidence * 100.0,
+                pred.threat_level.as_str(),
+                pred.attack_type,
+            );
+        }
         println!("  Status    : ✅ BLOCKED AT KERNEL LEVEL");
 
         // AI Analysis (disabled in hot path for performance)
@@ -372,6 +462,16 @@ fn handle_event(
 
 fn kill_process(pid: u32) -> Result<()> {
     signal::kill(Pid::from_raw(pid as i32), Signal::SIGKILL).context("Failed to send SIGKILL")
+}
+
+impl Drop for EbpfEngine {
+    fn drop(&mut self) {
+        log::info!("🧹 Cleaning up eBPF programs and resources...");
+        // The libbpf-rs skel drop implementation handles detaching programs
+        // and closing map FDs when the skeleton is dropped.
+        self.skel.take();
+        log::info!("✅ eBPF hooks detached successfully");
+    }
 }
 
 #[cfg(test)]

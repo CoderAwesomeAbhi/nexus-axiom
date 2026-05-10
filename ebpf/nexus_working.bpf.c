@@ -54,6 +54,13 @@ int mmap_file_hook(void *ctx)
     unsigned long prot = args[2];
     
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        // Check allowlist first
+        __u32 pid = bpf_get_current_pid_tgid() >> 32;
+        __u8 *allowed = bpf_map_lookup_elem(&allowlist, &pid);
+        if (allowed && *allowed == 1) {
+            return 0;  // Allow
+        }
+        
         // Check audit mode
         __u32 key = 0;
         __u8 *audit_mode = bpf_map_lookup_elem(&config, &key);
@@ -85,6 +92,13 @@ int mprotect_hook(void *ctx)
     unsigned long prot = args[2];
     
     if ((prot & PROT_WRITE) && (prot & PROT_EXEC)) {
+        // Check allowlist first
+        __u32 pid = bpf_get_current_pid_tgid() >> 32;
+        __u8 *allowed = bpf_map_lookup_elem(&allowlist, &pid);
+        if (allowed && *allowed == 1) {
+            return 0;  // Allow
+        }
+        
         // Check audit mode
         __u32 key = 0;
         __u8 *audit_mode = bpf_map_lookup_elem(&config, &key);

@@ -121,8 +121,8 @@ static __u64 (*bpf_ktime_get_ns)(void) = (void *) 5;
 SEC("xdp")
 int network_filter(struct xdp_md *ctx)
 {
-    void *data_end = (void *)(long)ctx->data_end;
-    void *data = (void *)(long)ctx->data;
+    void *data_end = (void *)(__u64)ctx->data_end;
+    void *data = (void *)(__u64)ctx->data;
 
     struct ethhdr *eth = data;
     if ((void *)(eth + 1) > data_end)

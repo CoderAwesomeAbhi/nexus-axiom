@@ -1,229 +1,288 @@
-# Contributing to Nexus Axiom
+# 🤝 Contributing to Nexus Axiom
 
-Thank you for your interest! This project aims to make eBPF security accessible.
+**Thank you for your interest!** This project needs help from the community.
 
-## Quick Start
+---
 
-1. Fork the repo
-2. Clone: `git clone https://github.com/YOUR_USERNAME/nexus-axiom.git`
-3. Create branch: `git checkout -b feature/your-feature`
-4. Make changes
-5. Test: `cargo test && cargo clippy`
-6. Commit: `git commit -m "feat: your feature"`
-7. Push: `git push origin feature/your-feature`
-8. Open PR
+## 🎓 About This Project
 
-## Good First Issues
+This is built by an 8th grader learning eBPF and kernel security. **I need mentorship and help from experienced developers.**
 
-Look for issues labeled `good first issue` - perfect for new contributors:
+---
 
-**Easy (1-2 hours):**
-- Add more CVE test cases
-- Improve documentation
-- Add unit tests
+## 🚀 How You Can Help
+
+### 1. 🔍 Code Review
+**Most needed:** Security engineers to review the code
+
+**What to review:**
+- eBPF code in `ebpf/`
+- Rust code in `src/`
+- Security implications
+- Performance issues
+- Best practices
+
+**How to help:**
+- Open issues with findings
+- Comment on code
+- Suggest improvements
+
+### 2. 🧪 Testing
+**Most needed:** People to test on different systems
+
+**What to test:**
+- Different Linux distros
+- Different kernel versions
+- Different workloads
+- Edge cases
+
+**How to help:**
+- Report bugs
+- Share benchmarks
+- Document issues
+
+### 3. 📖 Documentation
+**Most needed:** Better docs and tutorials
+
+**What to write:**
+- Setup guides
+- Troubleshooting docs
+- Architecture explanations
+- Use case examples
+
+**How to help:**
+- Improve README
+- Write tutorials
+- Create videos
 - Fix typos
 
-**Medium (4-8 hours):**
-- Add allowlist feature for false positives
-- Improve error messages
-- Add more metrics
-- Optimize performance
+### 4. 💻 Code Contributions
+**Most needed:** Bug fixes and small features
 
-**Hard (1-2 days):**
-- ARM architecture support
-- Real-time network stats from XDP
-- Graceful shutdown for FS protection
-- Advanced threat correlation
+**Good first issues:**
+- Documentation improvements
+- Test coverage
+- Error handling
+- Performance optimization
 
-## Areas We Need Help
+**How to help:**
+- Check [Issues](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
+- Look for "good first issue" label
+- Submit pull requests
 
-### Testing
-- More CVE test cases
-- Stress testing under load
-- False positive identification
-- ARM architecture testing
+### 5. 🎓 Mentorship
+**Most needed:** Experienced developers to guide me
 
-### Documentation
-- Installation guides for different distros
-- Troubleshooting guides
-- Video tutorials
-- Translation to other languages
+**What I need help with:**
+- eBPF best practices
+- Rust patterns
+- Security considerations
+- Project management
 
-### Features
-- Allowlist for legitimate W^X programs
-- Better false positive handling
-- SIEM integrations (Splunk, ELK, etc.)
-- Kubernetes Helm chart improvements
+**How to help:**
+- Review my code
+- Answer questions
+- Suggest improvements
+- Pair programming
 
-### Performance
-- Reduce memory footprint
-- Optimize event processing
-- Better rate limiting
-- Async AI analysis
+---
 
-## Development Setup
+## 🔧 Development Setup
 
 ### Prerequisites
-- Linux kernel 5.8+ with `lsm=bpf`
-- Rust 1.70+
-- clang, llvm, libbpf-dev
-- Root access for testing
+```bash
+# Ubuntu/Debian
+sudo apt-get install -y \
+    clang \
+    llvm \
+    libelf-dev \
+    libbpf-dev \
+    pkg-config \
+    build-essential
+
+# Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
 ### Build
 ```bash
-cargo build --release
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom
+cd nexus-axiom
+cargo build
 ```
 
 ### Test
 ```bash
-# Unit tests
 cargo test
-
-# Lint
-cargo clippy --all-targets --all-features -- -D warnings
-
-# Format
-cargo fmt
-
-# Integration test
-sudo bash proof.sh
+./tests/verify_claims.sh
 ```
 
-### Run Locally
-```bash
-sudo ./target/release/nexus-axiom start
+---
+
+## 📝 Pull Request Process
+
+1. **Fork the repo**
+2. **Create a branch:** `git checkout -b feature/your-feature`
+3. **Make changes**
+4. **Test:** `cargo test && cargo check`
+5. **Commit:** `git commit -m "Add: your feature"`
+6. **Push:** `git push origin feature/your-feature`
+7. **Open PR** with description
+
+### PR Guidelines
+- ✅ Describe what you changed and why
+- ✅ Include tests if applicable
+- ✅ Update docs if needed
+- ✅ Keep changes focused
+- ✅ Be patient (I'm in school during the day)
+
+---
+
+## 🐛 Reporting Bugs
+
+### Before Reporting
+- Check existing issues
+- Try latest version
+- Verify it's reproducible
+
+### What to Include
+```markdown
+**Environment:**
+- OS: Ubuntu 22.04
+- Kernel: 5.15.0
+- Nexus Axiom version: 1.0.0
+
+**Steps to Reproduce:**
+1. Start nexus-axiom
+2. Run exploit
+3. See error
+
+**Expected:** Process should be killed
+**Actual:** Process continues running
+
+**Logs:**
+[paste logs here]
 ```
 
-## Code Style
+---
 
-- Run `cargo fmt` before committing
-- Run `cargo clippy` and fix warnings
-- Add tests for new features
-- Update README if adding features
-- Keep functions small and focused
-- Comment complex eBPF code
+## 💡 Suggesting Features
 
-## Commit Messages
+### Before Suggesting
+- Check existing issues
+- Consider if it fits the project scope
+- Think about implementation
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation only
-- `test:` Adding tests
-- `refactor:` Code refactoring
-- `perf:` Performance improvement
-- `chore:` Maintenance
-
-Examples:
-- `feat: add allowlist for false positives`
-- `fix: handle ptrace events correctly`
-- `docs: improve installation guide`
-
-## Pull Request Process
-
-1. **Before submitting:**
-   - Run `cargo test && cargo clippy && cargo fmt`
-   - Update README if needed
-   - Add tests for new features
-   - Verify proof.sh still works
-
-2. **PR description should include:**
-   - What: Brief description of changes
-   - Why: Reason for changes
-   - How: Technical approach
-   - Testing: How you tested it
-
-3. **Review process:**
-   - Maintainer will review within 24-48 hours
-   - Address feedback promptly
-   - Once approved, maintainer will merge
-
-4. **After merge:**
-   - Your contribution will be in next release
-   - You'll be added to contributors list
-
-## Maintainer Response SLA
-
-We commit to:
-- **Issues:** First response within 24 hours
-- **PRs:** First review within 48 hours
-- **Security issues:** Response within 12 hours
-- **Questions:** Response within 48 hours
-
-If we miss these SLAs, please ping us!
-
-## Roadmap
-
-### v1.1 (Next 2 weeks)
-- [ ] Allowlist for false positives
-- [ ] Real-time network stats
-- [ ] Graceful shutdown
-- [ ] ARM support
-
-### v1.2 (Next month)
-- [ ] Advanced threat correlation
-- [ ] Better SIEM integrations
-- [ ] Performance optimizations
-- [ ] More CVE tests
-
-### v2.0 (Future)
-- [ ] Machine learning for anomaly detection
-- [ ] Policy-as-code
-- [ ] Multi-tenant support
-- [ ] Attack replay lab
-
-See [GitHub Projects](https://github.com/CoderAwesomeAbhi/nexus-axiom/projects) for detailed roadmap.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│         User Applications               │
-└──────────────┬──────────────────────────┘
-               │ syscall
-               ▼
-┌─────────────────────────────────────────┐
-│         Linux Kernel                    │
-│  ┌───────────────────────────────────┐  │
-│  │  LSM Hook (eBPF)                  │  │
-│  │  - mmap_file                      │  │
-│  │  - file_mprotect                  │  │
-│  └───────────┬───────────────────────┘  │
-└──────────────┼──────────────────────────┘
-               │ Ring Buffer
-               ▼
-┌─────────────────────────────────────────┐
-│    Nexus Axiom (Rust Userspace)        │
-│  ┌─────────────────────────────────┐   │
-│  │  Event Handler                  │   │
-│  │  - Parse events                 │   │
-│  │  - Log to JSON                  │   │
-│  │  - Send SIGKILL                 │   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │  Metrics Server (Prometheus)    │   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │  Dashboard (HTTP)               │   │
-│  └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
+### What to Include
+```markdown
+**Problem:** Current behavior is X
+**Solution:** Proposed behavior is Y
+**Use Case:** This helps with Z
+**Alternatives:** Could also do A or B
 ```
 
-Key files:
-- `ebpf/nexus_working.bpf.c` - eBPF LSM hooks
-- `src/ebpf_engine.rs` - Event processing
-- `src/metrics.rs` - Prometheus metrics
-- `src/dashboard.rs` - Web dashboard
+---
 
-## Questions?
+## 🎯 Priority Areas
 
-- Open an issue
-- Start a discussion
-- Check existing docs
+### High Priority
+1. **Security review** - Most important
+2. **Testing on different systems**
+3. **Documentation improvements**
+4. **Bug fixes**
 
-We're friendly and happy to help!
+### Medium Priority
+1. **Performance optimization**
+2. **More test coverage**
+3. **Better error messages**
+4. **CI/CD improvements**
 
-## License
+### Low Priority
+1. **New features**
+2. **UI improvements**
+3. **Integrations**
 
-By contributing, you agree your code will be licensed under GPL-3.0.
+---
+
+## 👥 Looking for Co-Maintainers
+
+**I need 1-2 co-maintainers** with:
+- Security background
+- eBPF experience
+- Rust knowledge
+- Time to help
+
+**Responsibilities:**
+- Review pull requests
+- Help with issues
+- Guide project direction
+- Mentor me
+
+**Benefits:**
+- Co-ownership of project
+- Credit in all materials
+- Learning opportunity
+- Open source contribution
+
+**Interested?** Email me or open an issue.
+
+---
+
+## 📚 Resources
+
+### Learning eBPF
+- [eBPF.io](https://ebpf.io)
+- [BPF Performance Tools](http://www.brendangregg.com/bpf-performance-tools-book.html)
+- [libbpf-bootstrap](https://github.com/libbpf/libbpf-bootstrap)
+
+### Learning Rust
+- [The Rust Book](https://doc.rust-lang.org/book/)
+- [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
+
+### Security
+- [Falco](https://falco.org)
+- [Tetragon](https://tetragon.io)
+- [Linux Security Modules](https://www.kernel.org/doc/html/latest/security/lsm.html)
+
+---
+
+## 🙏 Thank You
+
+**Every contribution helps:**
+- ⭐ Star the repo
+- 🐛 Report bugs
+- 💻 Submit code
+- 📖 Improve docs
+- 💬 Answer questions
+- 🎓 Mentor me
+
+**I appreciate all help!**
+
+---
+
+## 📧 Contact
+
+**GitHub:** [@CoderAwesomeAbhi](https://github.com/CoderAwesomeAbhi)  
+**Issues:** [GitHub Issues](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)  
+**Discussions:** [GitHub Discussions](https://github.com/CoderAwesomeAbhi/nexus-axiom/discussions)
+
+**Response time:** Usually within 24 hours (I'm in school during the day)
+
+---
+
+## 📜 Code of Conduct
+
+**Be kind and respectful.**
+
+- ✅ Constructive feedback
+- ✅ Helpful suggestions
+- ✅ Patient with beginners
+- ❌ Harassment
+- ❌ Discrimination
+- ❌ Trolling
+
+**Remember:** I'm 13 and learning. Please be patient and helpful.
+
+---
+
+**Thank you for contributing!** 🚀

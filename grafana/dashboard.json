@@ -1,0 +1,115 @@
+{
+  "dashboard": {
+    "title": "Nexus Axiom Security Dashboard",
+    "tags": ["security", "ebpf", "nexus-axiom"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Exploits Blocked (Total)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "nexus_axiom_blocked_total",
+            "legendFormat": "Blocked"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Events Processed",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "nexus_axiom_events_total",
+            "legendFormat": "Events"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Network Packets Dropped",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "nexus_axiom_network_drops",
+            "legendFormat": "Dropped"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "nexus_axiom_uptime_seconds",
+            "legendFormat": "Uptime"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Events Over Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(nexus_axiom_events_total[5m])",
+            "legendFormat": "Events/sec"
+          },
+          {
+            "expr": "rate(nexus_axiom_blocked_total[5m])",
+            "legendFormat": "Blocked/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Event Types",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(nexus_axiom_mmap_events[5m])",
+            "legendFormat": "mmap"
+          },
+          {
+            "expr": "rate(nexus_axiom_mprotect_events[5m])",
+            "legendFormat": "mprotect"
+          },
+          {
+            "expr": "rate(nexus_axiom_exec_events[5m])",
+            "legendFormat": "exec"
+          },
+          {
+            "expr": "rate(nexus_axiom_file_events[5m])",
+            "legendFormat": "file"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      }
+    ],
+    "refresh": "5s",
+    "time": {"from": "now-1h", "to": "now"}
+  }
+}

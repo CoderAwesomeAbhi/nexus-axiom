@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Nexus Axiom eBPF Security - AWS ECS Deployment
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC to deploy into
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnets for ECS tasks (use private subnets)
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Docker image tag
+  NexusMode:
+    Type: String
+    Default: audit
+    AllowedValues: [audit, enforce]
+    Description: "audit = log only, enforce = kill violators"
+
+Resources:
+  # ECS Cluster
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: nexus-axiom
+      CapacityProviders: [FARGATE]
+
+  # Task execution role
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nexus-axiom-execution
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  # Task role (for CloudWatch logs)
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: nexus-axiom-task
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt LogGroup.Arn
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /nexus-axiom
+      RetentionInDays: 7
+
+  # Security group
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Nexus Axiom
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 10.0.0.0/8
+        - IpProtocol: tcp
+          FromPort: 9090
+          ToPort: 9090
+          CidrIp: 10.0.0.0/8
+
+  # Task definition
+  # NOTE: eBPF requires privileged mode — use EC2 launch type for full eBPF support
+  # Fargate has limited kernel access; EC2 launch type recommended for production
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: nexus-axiom
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [EC2]
+      ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+      TaskRoleArn: !GetAtt TaskRole.Arn
+      ContainerDefinitions:
+        - Name: nexus-axiom
+          Image: !Sub ghcr.io/coderawesomeabhi/nexus-axiom:${ImageTag}
+          Privileged: true
+          Environment:
+            - Name: NEXUS_MODE
+              Value: !Ref NexusMode
+            - Name: RUST_LOG
+              Value: info
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+            - ContainerPort: 9090
+              Protocol: tcp
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /nexus-axiom
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: nexus
+          MountPoints:
+            - SourceVolume: debugfs
+              ContainerPath: /sys/kernel/debug
+              ReadOnly: true
+            - SourceVolume: bpffs
+              ContainerPath: /sys/fs/bpf
+      Volumes:
+        - Name: debugfs
+          Host:
+            SourcePath: /sys/kernel/debug
+        - Name: bpffs
+          Host:
+            SourcePath: /sys/fs/bpf
+
+  # ECS Service
+  Service:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: nexus-axiom
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinition
+      SchedulingStrategy: DAEMON  # Run on every EC2 node
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          Subnets: !Ref SubnetIds
+          SecurityGroups: [!Ref SecurityGroup]
+
+Outputs:
+  ClusterArn:
+    Value: !GetAtt Cluster.Arn
+  ServiceName:
+    Value: !GetAtt Service.Name
+  DashboardPort:
+    Value: "8080 (internal)"
+  MetricsPort:
+    Value: "9090 (internal)"

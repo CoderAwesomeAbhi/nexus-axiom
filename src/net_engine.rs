@@ -3,11 +3,13 @@ use libbpf_rs::skel::{OpenSkel, Skel, SkelBuilder};
 use libbpf_rs::MapFlags;
 use log;
 use std::net::Ipv4Addr;
+use std::sync::Arc;
 
 include!(concat!(env!("OUT_DIR"), "/nexus_net.skel.rs"));
 
 pub struct NetEngine {
     skel: Option<NexusNetSkel<'static>>,
+    metrics: Option<Arc<crate::metrics::MetricsServer>>,
 }
 
 impl Default for NetEngine {
@@ -18,7 +20,17 @@ impl Default for NetEngine {
 
 impl NetEngine {
     pub fn new() -> Result<Self> {
-        Ok(Self { skel: None })
+        Ok(Self { 
+            skel: None,
+            metrics: None,
+        })
+    }
+    
+    pub fn with_metrics(metrics: Arc<crate::metrics::MetricsServer>) -> Result<Self> {
+        Ok(Self {
+            skel: None,
+            metrics: Some(metrics),
+        })
     }
 
     pub fn load_and_attach(&mut self) -> Result<()> {
@@ -43,6 +55,12 @@ impl NetEngine {
         let val: u8 = 1;
 
         blocklist.update(&ip_bytes, &val.to_ne_bytes(), MapFlags::ANY)?;
+        
+        // Increment network_drops metric
+        if let Some(metrics) = &self.metrics {
+            metrics.network_drops.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+        
         log::info!("🚫 Blocked IP: {}", ip);
         Ok(())
     }
@@ -57,6 +75,12 @@ impl NetEngine {
         let val: u8 = 1;
 
         blocked_ports.update(&port_bytes, &val.to_ne_bytes(), MapFlags::ANY)?;
+        
+        // Increment network_drops metric
+        if let Some(metrics) = &self.metrics {
+            metrics.network_drops.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+        
         log::info!("🚫 Blocked port: {}", port);
         Ok(())
     }

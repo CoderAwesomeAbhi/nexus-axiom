@@ -4,12 +4,12 @@
 set -e
 
 echo "🔧 Compiling minimal working eBPF..."
-clang -O2 -target bpf -g -c ebpf/working_lsm.bpf.c -o /tmp/working_lsm.bpf.o -I/usr/include -I/usr/include/x86_64-linux-gnu
+clang -O2 -target bpf -g -c ebpf/nexus_working.bpf.c -o /tmp/nexus_working.bpf.o -I/usr/include -I/usr/include/x86_64-linux-gnu
 
 echo "✅ Compiled successfully!"
 echo ""
 echo "📦 Loading eBPF program..."
-sudo bpftool prog load /tmp/working_lsm.bpf.o /sys/fs/bpf/nexus_test type lsm
+sudo bpftool prog load /tmp/nexus_working.bpf.o /sys/fs/bpf/nexus_test type lsm
 
 echo "✅ Loaded successfully!"
 echo ""

@@ -1,0 +1,40 @@
+[Unit]
+Description=Nexus Axiom eBPF Security Daemon (Instance %i)
+Documentation=https://github.com/your-org/nexus-axiom
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/sys/kernel/security/lsm
+
+[Service]
+Type=notify
+ExecStartPre=/bin/sh -c 'grep -q bpf /sys/kernel/security/lsm || (echo "BPF LSM not enabled" && exit 1)'
+ExecStart=/usr/local/bin/nexus-axiom start --ha
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Security hardening
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=no
+ReadWritePaths=/var/log/nexus-axiom /var/lib/nexus-axiom /var/run/nexus-axiom /sys/fs/bpf /sys/fs/cgroup
+
+# Resource limits
+LimitMEMLOCK=infinity
+LimitNOFILE=65536
+
+# Watchdog: restart if no heartbeat within 30s
+WatchdogSec=30
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nexus-axiom-%i
+
+[Install]
+WantedBy=multi-user.target
