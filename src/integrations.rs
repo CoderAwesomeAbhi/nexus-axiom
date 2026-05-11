@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use anyhow::Result;
-use std::time::Duration;
-use std::sync::atomic::{AtomicU32, AtomicBool, Ordering};
+use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
 // ── Configuration types ──────────────────────────────────────────────────────
 
@@ -55,15 +55,15 @@ pub struct SIEMConfig {
 pub struct SyslogConfig {
     pub host: String,
     pub port: u16,
-    pub protocol: String,    // "udp" or "tcp"
-    pub facility: u8,        // syslog facility (1=user, 4=auth, 10=security)
-    pub rfc: String,         // "3164" or "5424"
+    pub protocol: String, // "udp" or "tcp"
+    pub facility: u8,     // syslog facility (1=user, 4=auth, 10=security)
+    pub rfc: String,      // "3164" or "5424"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebhookConfig {
     pub url: String,
-    pub method: String,      // POST, PUT
+    pub method: String, // POST, PUT
     pub headers: std::collections::HashMap<String, String>,
     pub template: Option<String>, // optional Handlebars-style template
 }
@@ -200,8 +200,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.slack.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_slack_with_retry(&client, &slack, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -215,8 +221,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.pagerduty.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_pagerduty_with_retry(&client, &pagerduty, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -230,8 +242,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.datadog.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_datadog_with_retry(&client, &datadog, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -245,8 +263,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.splunk.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_splunk_with_retry(&client, &splunk, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -260,8 +284,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.siem.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_siem_with_retry(&client, &siem, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -274,8 +304,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.syslog.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_syslog(&syslog, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -289,8 +325,14 @@ impl IntegrationManager {
                 let breaker = self.breakers.webhook.clone();
                 tasks.push(tokio::spawn(async move {
                     match Self::send_webhook_with_retry(&client, &webhook, &alert).await {
-                        Ok(()) => { breaker.record_success(); Ok(()) }
-                        Err(e) => { breaker.record_failure(); Err(e) }
+                        Ok(()) => {
+                            breaker.record_success();
+                            Ok(())
+                        }
+                        Err(e) => {
+                            breaker.record_failure();
+                            Err(e)
+                        }
                     }
                 }));
             }
@@ -556,9 +598,9 @@ impl IntegrationManager {
 
         let severity = match alert.severity.as_str() {
             "critical" => 2u8, // Critical
-            "high" => 3,      // Error
-            "medium" => 4,    // Warning
-            "low" => 6,       // Informational
+            "high" => 3,       // Error
+            "medium" => 4,     // Warning
+            "low" => 6,        // Informational
             _ => 6,
         };
 
@@ -681,7 +723,11 @@ impl IntegrationManager {
         };
         format!(
             "CEF:0|NexusAxiom|Security|1.0|{}|{}|{}|msg={} src={} cs1={} cs1Label=correlation_id",
-            alert.severity, alert.title, severity_int, alert.description, alert.source,
+            alert.severity,
+            alert.title,
+            severity_int,
+            alert.description,
+            alert.source,
             alert.correlation_id.as_deref().unwrap_or("none")
         )
     }

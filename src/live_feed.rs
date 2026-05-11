@@ -4,7 +4,6 @@
 /// (`init()`, `broadcast()`, `subscribe()`, `make_event()`) without needing to
 /// pass around an Arc. This matches the API expected by `ebpf_engine.rs` and
 /// `dashboard.rs`.
-
 use serde::{Deserialize, Serialize};
 use std::sync::{mpsc, OnceLock};
 
@@ -29,7 +28,8 @@ pub struct AttackEvent {
 // ── Global state ─────────────────────────────────────────────────────────────
 
 static SENDER: OnceLock<mpsc::SyncSender<AttackEvent>> = OnceLock::new();
-static SUBSCRIBERS: OnceLock<std::sync::Mutex<Vec<mpsc::SyncSender<AttackEvent>>>> = OnceLock::new();
+static SUBSCRIBERS: OnceLock<std::sync::Mutex<Vec<mpsc::SyncSender<AttackEvent>>>> =
+    OnceLock::new();
 
 /// Initialize the live-feed bus. Must be called once before `broadcast()` or
 /// `subscribe()`.  Safe to call multiple times (subsequent calls are no-ops).

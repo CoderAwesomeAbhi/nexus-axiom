@@ -2,7 +2,6 @@
 ///
 /// Runs real checks against the running system to verify compliance with
 /// SOC2, ISO27001, GDPR, HIPAA, PCI-DSS, and NIST CSF frameworks.
-
 use anyhow::Result;
 use serde::Serialize;
 use std::path::Path;
@@ -18,7 +17,12 @@ pub struct ComplianceCheck {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
-pub enum CheckStatus { Pass, Fail, Warning, NotApplicable }
+pub enum CheckStatus {
+    Pass,
+    Fail,
+    Warning,
+    NotApplicable,
+}
 
 pub struct ComplianceChecker;
 
@@ -90,7 +94,7 @@ impl ComplianceChecker {
     fn check_cc6_1_access_controls() -> ComplianceCheck {
         let mut evidence = Vec::new();
         let mut status = CheckStatus::Pass;
-        
+
         // Check 1: Password policy
         if let Ok(content) = std::fs::read_to_string("/etc/pam.d/common-password") {
             if content.contains("minlen=") {
@@ -100,7 +104,7 @@ impl ComplianceChecker {
                 evidence.push("No password length requirement".into());
             }
         }
-        
+
         // Check 2: SSH config
         if let Ok(content) = std::fs::read_to_string("/etc/ssh/sshd_config") {
             if content.contains("PasswordAuthentication no") {
@@ -110,7 +114,7 @@ impl ComplianceChecker {
                 evidence.push("SSH allows password auth".into());
             }
         }
-        
+
         // Check 3: Sudo requires password
         if let Ok(content) = std::fs::read_to_string("/etc/sudoers") {
             if !content.contains("NOPASSWD") {
@@ -120,7 +124,7 @@ impl ComplianceChecker {
                 evidence.push("Some sudo commands don't require password".into());
             }
         }
-        
+
         ComplianceCheck {
             framework: "SOC2".into(),
             control_id: "CC6.1".into(),
@@ -128,7 +132,10 @@ impl ComplianceChecker {
             status: status.clone(),
             evidence,
             remediation: if status != CheckStatus::Pass {
-                Some("Configure password policy, disable SSH password auth, require sudo password".into())
+                Some(
+                    "Configure password policy, disable SSH password auth, require sudo password"
+                        .into(),
+                )
             } else {
                 None
             },
@@ -138,25 +145,43 @@ impl ComplianceChecker {
     fn check_cc6_6_audit_logging() -> ComplianceCheck {
         let log_exists = Path::new("/var/log/nexus-axiom/events.json").exists();
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC6.6".into(),
+            framework: "SOC2".into(),
+            control_id: "CC6.6".into(),
             control_name: "Audit Logging".into(),
-            status: if log_exists { CheckStatus::Pass } else { CheckStatus::Warning },
+            status: if log_exists {
+                CheckStatus::Pass
+            } else {
+                CheckStatus::Warning
+            },
             evidence: vec![
                 format!("Audit log file exists: {}", log_exists),
                 "JSON-structured events with timestamps, UIDs, PIDs".into(),
             ],
-            remediation: if !log_exists { Some("Start nexus-axiom to begin logging".into()) } else { None },
+            remediation: if !log_exists {
+                Some("Start nexus-axiom to begin logging".into())
+            } else {
+                None
+            },
         }
     }
 
     fn check_cc6_7_restrict_access() -> ComplianceCheck {
         let config_secure = Self::check_file_permissions("/etc/nexus-axiom/config.toml", 0o640);
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC6.7".into(),
+            framework: "SOC2".into(),
+            control_id: "CC6.7".into(),
             control_name: "Restrict Access".into(),
-            status: if config_secure { CheckStatus::Pass } else { CheckStatus::Warning },
+            status: if config_secure {
+                CheckStatus::Pass
+            } else {
+                CheckStatus::Warning
+            },
             evidence: vec!["Config file access restricted to root/nexus-axiom group".into()],
-            remediation: if !config_secure { Some("chmod 640 /etc/nexus-axiom/config.toml".into()) } else { None },
+            remediation: if !config_secure {
+                Some("chmod 640 /etc/nexus-axiom/config.toml".into())
+            } else {
+                None
+            },
         }
     }
 
@@ -164,20 +189,30 @@ impl ComplianceChecker {
         // Check if metrics endpoint is active
         let metrics_ok = std::net::TcpStream::connect("127.0.0.1:9090").is_ok();
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC7.2".into(),
+            framework: "SOC2".into(),
+            control_id: "CC7.2".into(),
             control_name: "System Monitoring".into(),
-            status: if metrics_ok { CheckStatus::Pass } else { CheckStatus::Warning },
+            status: if metrics_ok {
+                CheckStatus::Pass
+            } else {
+                CheckStatus::Warning
+            },
             evidence: vec![
                 format!("Prometheus metrics endpoint active: {}", metrics_ok),
                 "eBPF LSM hooks monitor all security-relevant syscalls".into(),
             ],
-            remediation: if !metrics_ok { Some("Start nexus-axiom to activate monitoring".into()) } else { None },
+            remediation: if !metrics_ok {
+                Some("Start nexus-axiom to activate monitoring".into())
+            } else {
+                None
+            },
         }
     }
 
     fn check_cc7_3_detection() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC7.3".into(),
+            framework: "SOC2".into(),
+            control_id: "CC7.3".into(),
             control_name: "Threat Detection".into(),
             status: CheckStatus::Pass,
             evidence: vec![
@@ -191,7 +226,8 @@ impl ComplianceChecker {
 
     fn check_cc7_4_response() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC7.4".into(),
+            framework: "SOC2".into(),
+            control_id: "CC7.4".into(),
             control_name: "Incident Response".into(),
             status: CheckStatus::Pass,
             evidence: vec![
@@ -205,9 +241,14 @@ impl ComplianceChecker {
     fn check_cc8_1_change_management() -> ComplianceCheck {
         let git_exists = Path::new(".git").exists();
         ComplianceCheck {
-            framework: "SOC2".into(), control_id: "CC8.1".into(),
+            framework: "SOC2".into(),
+            control_id: "CC8.1".into(),
             control_name: "Change Management".into(),
-            status: if git_exists { CheckStatus::Pass } else { CheckStatus::Warning },
+            status: if git_exists {
+                CheckStatus::Pass
+            } else {
+                CheckStatus::Warning
+            },
             evidence: vec![
                 format!("Version control (git): {}", git_exists),
                 "Config changes logged to audit trail".into(),
@@ -220,27 +261,36 @@ impl ComplianceChecker {
 
     fn check_a9_access_control() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "ISO27001".into(), control_id: "A.9".into(),
+            framework: "ISO27001".into(),
+            control_id: "A.9".into(),
             control_name: "Access Control".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["RBAC with admin/analyst/operator roles".into(), "Tenant isolation enforced".into()],
+            evidence: vec![
+                "RBAC with admin/analyst/operator roles".into(),
+                "Tenant isolation enforced".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_a10_cryptography() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "ISO27001".into(), control_id: "A.10".into(),
+            framework: "ISO27001".into(),
+            control_id: "A.10".into(),
             control_name: "Cryptography".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["SHA-256 for audit log integrity".into(), "TLS for external API calls".into()],
+            evidence: vec![
+                "SHA-256 for audit log integrity".into(),
+                "TLS for external API calls".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_a12_operations() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "ISO27001".into(), control_id: "A.12".into(),
+            framework: "ISO27001".into(),
+            control_id: "A.12".into(),
             control_name: "Operations Security".into(),
             status: CheckStatus::Pass,
             evidence: vec![
@@ -253,7 +303,8 @@ impl ComplianceChecker {
 
     fn check_a16_incident_management() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "ISO27001".into(), control_id: "A.16".into(),
+            framework: "ISO27001".into(),
+            control_id: "A.16".into(),
             control_name: "Incident Management".into(),
             status: CheckStatus::Pass,
             evidence: vec![
@@ -267,10 +318,14 @@ impl ComplianceChecker {
 
     fn check_a18_compliance() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "ISO27001".into(), control_id: "A.18".into(),
+            framework: "ISO27001".into(),
+            control_id: "A.18".into(),
             control_name: "Compliance".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["Automated compliance reporting".into(), "Multi-framework support".into()],
+            evidence: vec![
+                "Automated compliance reporting".into(),
+                "Multi-framework support".into(),
+            ],
             remediation: None,
         }
     }
@@ -279,7 +334,8 @@ impl ComplianceChecker {
 
     fn check_gdpr_art30_records() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "GDPR".into(), control_id: "Art.30".into(),
+            framework: "GDPR".into(),
+            control_id: "Art.30".into(),
             control_name: "Records of Processing".into(),
             status: CheckStatus::Pass,
             evidence: vec!["All data processing logged with timestamps and purposes".into()],
@@ -289,17 +345,22 @@ impl ComplianceChecker {
 
     fn check_gdpr_art32_security() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "GDPR".into(), control_id: "Art.32".into(),
+            framework: "GDPR".into(),
+            control_id: "Art.32".into(),
             control_name: "Security of Processing".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["Encryption in transit (TLS)".into(), "Access controls (RBAC)".into()],
+            evidence: vec![
+                "Encryption in transit (TLS)".into(),
+                "Access controls (RBAC)".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_gdpr_art33_breach_notification() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "GDPR".into(), control_id: "Art.33".into(),
+            framework: "GDPR".into(),
+            control_id: "Art.33".into(),
             control_name: "Breach Notification".into(),
             status: CheckStatus::Pass,
             evidence: vec!["Real-time alerting via Slack/PagerDuty/SIEM".into()],
@@ -311,7 +372,8 @@ impl ComplianceChecker {
 
     fn check_hipaa_access_controls() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "HIPAA".into(), control_id: "164.312(a)".into(),
+            framework: "HIPAA".into(),
+            control_id: "164.312(a)".into(),
             control_name: "Access Controls".into(),
             status: CheckStatus::Pass,
             evidence: vec!["RBAC enforced".into(), "Unique user identification".into()],
@@ -321,7 +383,8 @@ impl ComplianceChecker {
 
     fn check_hipaa_audit_controls() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "HIPAA".into(), control_id: "164.312(b)".into(),
+            framework: "HIPAA".into(),
+            control_id: "164.312(b)".into(),
             control_name: "Audit Controls".into(),
             status: CheckStatus::Pass,
             evidence: vec!["All access logged with JSON structured events".into()],
@@ -331,10 +394,14 @@ impl ComplianceChecker {
 
     fn check_hipaa_integrity() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "HIPAA".into(), control_id: "164.312(c)".into(),
+            framework: "HIPAA".into(),
+            control_id: "164.312(c)".into(),
             control_name: "Integrity Controls".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["File system integrity monitoring active".into(), "SHA-256 checksums".into()],
+            evidence: vec![
+                "File system integrity monitoring active".into(),
+                "SHA-256 checksums".into(),
+            ],
             remediation: None,
         }
     }
@@ -343,30 +410,42 @@ impl ComplianceChecker {
 
     fn check_pci_req1_firewall() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "PCI-DSS".into(), control_id: "Req 1".into(),
+            framework: "PCI-DSS".into(),
+            control_id: "Req 1".into(),
             control_name: "Network Security Controls".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["XDP network filtering active".into(), "IP/port blocklists enforced".into()],
+            evidence: vec![
+                "XDP network filtering active".into(),
+                "IP/port blocklists enforced".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_pci_req6_secure_systems() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "PCI-DSS".into(), control_id: "Req 6".into(),
+            framework: "PCI-DSS".into(),
+            control_id: "Req 6".into(),
             control_name: "Secure Systems".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["W^X enforcement blocks code injection".into(), "Seccomp isolation".into()],
+            evidence: vec![
+                "W^X enforcement blocks code injection".into(),
+                "Seccomp isolation".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_pci_req10_logging() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "PCI-DSS".into(), control_id: "Req 10".into(),
+            framework: "PCI-DSS".into(),
+            control_id: "Req 10".into(),
             control_name: "Logging and Monitoring".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["All security events logged".into(), "Tamper-evident audit trail".into()],
+            evidence: vec![
+                "All security events logged".into(),
+                "Tamper-evident audit trail".into(),
+            ],
             remediation: None,
         }
     }
@@ -375,50 +454,74 @@ impl ComplianceChecker {
 
     fn check_nist_identify() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "NIST-CSF".into(), control_id: "ID".into(),
+            framework: "NIST-CSF".into(),
+            control_id: "ID".into(),
             control_name: "Identify".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["Asset discovery via process monitoring".into(), "Risk assessment via ML scoring".into()],
+            evidence: vec![
+                "Asset discovery via process monitoring".into(),
+                "Risk assessment via ML scoring".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_nist_protect() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "NIST-CSF".into(), control_id: "PR".into(),
+            framework: "NIST-CSF".into(),
+            control_id: "PR".into(),
             control_name: "Protect".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["W^X enforcement".into(), "XDP filtering".into(), "RBAC".into()],
+            evidence: vec![
+                "W^X enforcement".into(),
+                "XDP filtering".into(),
+                "RBAC".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_nist_detect() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "NIST-CSF".into(), control_id: "DE".into(),
+            framework: "NIST-CSF".into(),
+            control_id: "DE".into(),
             control_name: "Detect".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["Real-time eBPF monitoring".into(), "ML behavioral analysis".into(), "Correlation engine".into()],
+            evidence: vec![
+                "Real-time eBPF monitoring".into(),
+                "ML behavioral analysis".into(),
+                "Correlation engine".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_nist_respond() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "NIST-CSF".into(), control_id: "RS".into(),
+            framework: "NIST-CSF".into(),
+            control_id: "RS".into(),
             control_name: "Respond".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["Automated containment".into(), "SIEM integration".into(), "Incident response workflow".into()],
+            evidence: vec![
+                "Automated containment".into(),
+                "SIEM integration".into(),
+                "Incident response workflow".into(),
+            ],
             remediation: None,
         }
     }
 
     fn check_nist_recover() -> ComplianceCheck {
         ComplianceCheck {
-            framework: "NIST-CSF".into(), control_id: "RC".into(),
+            framework: "NIST-CSF".into(),
+            control_id: "RC".into(),
             control_name: "Recover".into(),
             status: CheckStatus::Pass,
-            evidence: vec!["HA failover".into(), "Systemd auto-restart".into(), "Self-protection monitoring".into()],
+            evidence: vec![
+                "HA failover".into(),
+                "Systemd auto-restart".into(),
+                "Self-protection monitoring".into(),
+            ],
             remediation: None,
         }
     }
@@ -436,5 +539,7 @@ impl ComplianceChecker {
     }
 
     #[cfg(not(unix))]
-    fn check_file_permissions(_path: &str, _max_mode: u32) -> bool { true }
+    fn check_file_permissions(_path: &str, _max_mode: u32) -> bool {
+        true
+    }
 }

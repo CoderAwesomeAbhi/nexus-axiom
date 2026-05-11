@@ -2,65 +2,65 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 #[cfg(target_os = "linux")]
+pub mod advanced_detection;
+#[cfg(target_os = "linux")]
 pub mod ai_analyst;
+#[cfg(target_os = "linux")]
+pub mod allowlist_kernel;
+#[cfg(target_os = "linux")]
+pub mod attack_wall;
+#[cfg(target_os = "linux")]
+pub mod autopilot;
+#[cfg(target_os = "linux")]
+pub mod compliance;
 #[cfg(target_os = "linux")]
 pub mod config;
 #[cfg(target_os = "linux")]
+pub mod containment;
+#[cfg(target_os = "linux")]
+pub mod correlation;
+#[cfg(target_os = "linux")]
 pub mod dashboard;
+#[cfg(target_os = "linux")]
+pub mod database;
+#[cfg(target_os = "linux")]
+pub mod dpu_offload;
 #[cfg(target_os = "linux")]
 mod ebpf_engine;
 #[cfg(target_os = "linux")]
 pub mod fs_protection;
 #[cfg(target_os = "linux")]
+pub mod incident_bundle;
+#[cfg(target_os = "linux")]
+pub mod integrations;
+#[cfg(target_os = "linux")]
 pub mod json_logger;
+#[cfg(target_os = "linux")]
+pub mod live_feed;
 #[cfg(target_os = "linux")]
 pub mod metrics;
 #[cfg(target_os = "linux")]
+pub mod ml_predictor;
+#[cfg(target_os = "linux")]
 pub mod net_engine;
+#[cfg(target_os = "linux")]
+pub mod policy_dsl;
+#[cfg(all(target_os = "linux", feature = "quantum"))]
+pub mod quantum_crypto;
+#[cfg(target_os = "linux")]
+pub mod rbac;
+#[cfg(target_os = "linux")]
+pub mod replay_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_engine;
 #[cfg(target_os = "linux")]
 pub mod seccomp_mode;
 #[cfg(target_os = "linux")]
-pub mod dpu_offload;
-#[cfg(target_os = "linux")]
-pub mod allowlist_kernel;
-#[cfg(target_os = "linux")]
-pub mod incident_bundle;
-#[cfg(target_os = "linux")]
-pub mod replay_engine;
-#[cfg(all(target_os = "linux", feature = "quantum"))]
-pub mod quantum_crypto;
-#[cfg(target_os = "linux")]
-pub mod policy_dsl;
+pub mod self_protection;
 #[cfg(target_os = "linux")]
 pub mod telemetry;
 #[cfg(target_os = "linux")]
-pub mod autopilot;
-#[cfg(target_os = "linux")]
-pub mod correlation;
-#[cfg(target_os = "linux")]
-pub mod containment;
-#[cfg(target_os = "linux")]
-pub mod self_protection;
-#[cfg(target_os = "linux")]
-pub mod attack_wall;
-#[cfg(target_os = "linux")]
-pub mod live_feed;
-#[cfg(target_os = "linux")]
-pub mod rbac;
-#[cfg(target_os = "linux")]
-pub mod integrations;
-#[cfg(target_os = "linux")]
-pub mod advanced_detection;
-#[cfg(target_os = "linux")]
-pub mod compliance;
-#[cfg(target_os = "linux")]
-pub mod database;
-#[cfg(target_os = "linux")]
 pub mod validation;
-#[cfg(target_os = "linux")]
-pub mod ml_predictor;
 
 #[cfg(target_os = "linux")]
 pub mod audit;
@@ -84,7 +84,7 @@ enum Commands {
         /// Audit mode: log security events without blocking or killing processes
         #[arg(long)]
         audit: bool,
-        
+
         /// Unprivileged mode: use seccomp user notification (no root required)
         #[arg(long)]
         unprivileged: bool,
@@ -134,7 +134,10 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Start { audit, unprivileged } => start_protection(audit, unprivileged),
+        Commands::Start {
+            audit,
+            unprivileged,
+        } => start_protection(audit, unprivileged),
         Commands::Monitor => monitor_events(),
         Commands::Status => show_status(),
         Commands::Events => stream_events(),
@@ -156,15 +159,15 @@ fn start_protection(audit: bool, unprivileged: bool) -> Result<()> {
 
     println!("\n🛡️  NEXUS AXIOM v{}", env!("CARGO_PKG_VERSION"));
     println!("{}", "=".repeat(70));
-    
+
     if unprivileged {
         println!("🔓 Starting in UNPRIVILEGED MODE (no root required)");
         println!("   Apps connect with: LD_PRELOAD=libnexus-client.so ./app\n");
-        
+
         let mut seccomp_mode = seccomp_mode::SeccompMode::new();
         return seccomp_mode.start_listener();
     }
-    
+
     println!("🟢 Starting Real-Time Protection...\n");
 
     // Load config
@@ -436,12 +439,12 @@ fn handle_allowlist(action: AllowlistAction) -> Result<()> {
             if !allowlist.contains(&pid) {
                 allowlist.push(pid);
                 fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
-                
+
                 #[cfg(target_os = "linux")]
                 {
                     let _ = allowlist_kernel::AllowlistKernel::add_to_map(pid);
                 }
-                
+
                 println!("✅ Added PID {} to allowlist", pid);
             } else {
                 println!("ℹ️  PID {} already in allowlist", pid);
@@ -478,12 +481,12 @@ fn handle_allowlist(action: AllowlistAction) -> Result<()> {
             if let Some(pos) = allowlist.iter().position(|&x| x == pid) {
                 allowlist.remove(pos);
                 fs::write(allowlist_path, serde_json::to_string_pretty(&allowlist)?)?;
-                
+
                 #[cfg(target_os = "linux")]
                 {
                     let _ = allowlist_kernel::AllowlistKernel::remove_from_map(pid);
                 }
-                
+
                 println!("✅ Removed PID {} from allowlist", pid);
             } else {
                 println!("ℹ️  PID {} not in allowlist", pid);

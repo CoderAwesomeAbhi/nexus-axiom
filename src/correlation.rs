@@ -90,91 +90,110 @@ impl CorrelationEngine {
             PatternDef {
                 sequence: vec![EventType::MmapWX, EventType::Exec],
                 pattern: AttackPattern::ShellcodeInjection,
-                base_severity: 0.95, window: Duration::from_secs(10),
+                base_severity: 0.95,
+                window: Duration::from_secs(10),
                 description: "W^X mmap followed by exec — shellcode injection",
             },
             PatternDef {
                 sequence: vec![EventType::Ptrace, EventType::MmapWX],
                 pattern: AttackPattern::PrivilegeEscalation,
-                base_severity: 0.90, window: Duration::from_secs(10),
+                base_severity: 0.90,
+                window: Duration::from_secs(10),
                 description: "ptrace followed by W^X mmap — privilege escalation",
             },
             PatternDef {
                 sequence: vec![EventType::Exec, EventType::NetworkConnect],
                 pattern: AttackPattern::ReverseShell,
-                base_severity: 0.85, window: Duration::from_secs(5),
+                base_severity: 0.85,
+                window: Duration::from_secs(5),
                 description: "exec followed by network connect — reverse shell",
             },
             PatternDef {
                 sequence: vec![EventType::Unshare, EventType::Mount, EventType::Exec],
                 pattern: AttackPattern::ContainerEscape,
-                base_severity: 0.95, window: Duration::from_secs(15),
+                base_severity: 0.95,
+                window: Duration::from_secs(15),
                 description: "unshare + mount + exec — container escape",
             },
             PatternDef {
                 sequence: vec![EventType::MemfdCreate, EventType::Exec],
                 pattern: AttackPattern::FilelessExecution,
-                base_severity: 0.90, window: Duration::from_secs(10),
+                base_severity: 0.90,
+                window: Duration::from_secs(10),
                 description: "memfd_create + exec — fileless malware",
             },
             PatternDef {
                 sequence: vec![EventType::FileAccess, EventType::NetworkConnect],
                 pattern: AttackPattern::DataExfiltration,
-                base_severity: 0.75, window: Duration::from_secs(30),
+                base_severity: 0.75,
+                window: Duration::from_secs(30),
                 description: "sensitive file access followed by network connect",
             },
             PatternDef {
                 sequence: vec![EventType::MmapWX, EventType::MprotectWX, EventType::Exec],
                 pattern: AttackPattern::MmapExecChain,
-                base_severity: 0.92, window: Duration::from_secs(10),
+                base_severity: 0.92,
+                window: Duration::from_secs(10),
                 description: "W^X mmap + mprotect + exec — multi-stage injection",
             },
             PatternDef {
                 sequence: vec![EventType::Ptrace, EventType::MmapWX, EventType::Exec],
                 pattern: AttackPattern::PtraceInjection,
-                base_severity: 0.93, window: Duration::from_secs(10),
+                base_severity: 0.93,
+                window: Duration::from_secs(10),
                 description: "ptrace + W^X mmap + exec — process injection",
             },
             PatternDef {
                 sequence: vec![EventType::Sigreturn, EventType::Exec],
                 pattern: AttackPattern::PrivilegeEscalation,
-                base_severity: 0.90, window: Duration::from_secs(5),
+                base_severity: 0.90,
+                window: Duration::from_secs(5),
                 description: "sigreturn + exec — SIGROP attack",
             },
             PatternDef {
-                sequence: vec![EventType::MprotectWX, EventType::MprotectWX, EventType::Exec],
+                sequence: vec![
+                    EventType::MprotectWX,
+                    EventType::MprotectWX,
+                    EventType::Exec,
+                ],
                 pattern: AttackPattern::ShellcodeInjection,
-                base_severity: 0.88, window: Duration::from_secs(10),
+                base_severity: 0.88,
+                window: Duration::from_secs(10),
                 description: "repeated mprotect W^X + exec — staged injection",
             },
             PatternDef {
                 sequence: vec![EventType::Unshare, EventType::Exec],
                 pattern: AttackPattern::ContainerEscape,
-                base_severity: 0.80, window: Duration::from_secs(10),
+                base_severity: 0.80,
+                window: Duration::from_secs(10),
                 description: "unshare + exec — namespace escape attempt",
             },
             PatternDef {
                 sequence: vec![EventType::Exec, EventType::Exec, EventType::NetworkConnect],
                 pattern: AttackPattern::LateralMovement,
-                base_severity: 0.70, window: Duration::from_secs(15),
+                base_severity: 0.70,
+                window: Duration::from_secs(15),
                 description: "chained exec + network — lateral movement",
             },
             PatternDef {
                 sequence: vec![EventType::MemfdCreate, EventType::MmapWX],
                 pattern: AttackPattern::FilelessExecution,
-                base_severity: 0.85, window: Duration::from_secs(10),
+                base_severity: 0.85,
+                window: Duration::from_secs(10),
                 description: "memfd_create + W^X mmap — preparing fileless payload",
             },
             PatternDef {
                 sequence: vec![EventType::Ptrace, EventType::Ptrace, EventType::MmapWX],
                 pattern: AttackPattern::PtraceInjection,
-                base_severity: 0.90, window: Duration::from_secs(10),
+                base_severity: 0.90,
+                window: Duration::from_secs(10),
                 description: "repeated ptrace + W^X — aggressive injection",
             },
             PatternDef {
                 sequence: vec![EventType::Mount, EventType::FileAccess, EventType::Exec],
                 pattern: AttackPattern::ContainerEscape,
-                base_severity: 0.85, window: Duration::from_secs(15),
+                base_severity: 0.85,
+                window: Duration::from_secs(15),
                 description: "mount + file access + exec — breakout via mount",
             },
         ];
@@ -241,12 +260,15 @@ impl CorrelationEngine {
         let window = Duration::from_secs(10);
         let cutoff = now - window;
 
-        let recent: Vec<&Event> = self.cross_pid_buffer.iter()
+        let recent: Vec<&Event> = self
+            .cross_pid_buffer
+            .iter()
             .filter(|e| e.timestamp >= cutoff)
             .collect();
 
         // Count unique PIDs with W^X events
-        let wx_pids: std::collections::HashSet<u32> = recent.iter()
+        let wx_pids: std::collections::HashSet<u32> = recent
+            .iter()
             .filter(|e| matches!(e.event_type, EventType::MmapWX | EventType::MprotectWX))
             .map(|e| e.pid)
             .collect();
@@ -263,14 +285,27 @@ impl CorrelationEngine {
         None
     }
 
-    fn has_sequence_in_window(&self, buffer: &VecDeque<Event>, pattern: &[EventType], window: Duration) -> bool {
-        if buffer.len() < pattern.len() { return false; }
+    fn has_sequence_in_window(
+        &self,
+        buffer: &VecDeque<Event>,
+        pattern: &[EventType],
+        window: Duration,
+    ) -> bool {
+        if buffer.len() < pattern.len() {
+            return false;
+        }
 
-        let types: Vec<&EventType> = buffer.iter()
+        let types: Vec<&EventType> = buffer
+            .iter()
             .filter(|e| {
                 if let Some(last) = buffer.back() {
-                    last.timestamp.duration_since(e.timestamp).unwrap_or(Duration::ZERO) <= window
-                } else { false }
+                    last.timestamp
+                        .duration_since(e.timestamp)
+                        .unwrap_or(Duration::ZERO)
+                        <= window
+                } else {
+                    false
+                }
             })
             .map(|e| &e.event_type)
             .collect();
@@ -287,9 +322,14 @@ impl CorrelationEngine {
 
     /// Apply time-decay: older events contribute less to severity.
     fn apply_time_decay(&self, buffer: &VecDeque<Event>, base_severity: f64) -> f64 {
-        if buffer.len() < 2 { return base_severity; }
+        if buffer.len() < 2 {
+            return base_severity;
+        }
         if let (Some(first), Some(last)) = (buffer.front(), buffer.back()) {
-            let span = last.timestamp.duration_since(first.timestamp).unwrap_or(Duration::ZERO);
+            let span = last
+                .timestamp
+                .duration_since(first.timestamp)
+                .unwrap_or(Duration::ZERO);
             let decay = 1.0 - (span.as_secs_f64() / 30.0).min(0.3); // max 30% decay over 30s
             return base_severity * decay;
         }
@@ -307,14 +347,24 @@ impl CorrelationEngine {
     }
 }
 
-impl Default for CorrelationEngine { fn default() -> Self { Self::new() } }
+impl Default for CorrelationEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn make_event(pid: u32, et: EventType) -> Event {
-        Event { pid, event_type: et, timestamp: SystemTime::now(), uid: 0, comm: "test".into() }
+        Event {
+            pid,
+            event_type: et,
+            timestamp: SystemTime::now(),
+            uid: 0,
+            comm: "test".into(),
+        }
     }
 
     #[test]
@@ -335,7 +385,10 @@ mod tests {
         let _ = engine.add_event(make_event(200, EventType::Mount));
         let result = engine.add_event(make_event(200, EventType::Exec));
         assert!(result.is_some());
-        assert!(matches!(result.unwrap().pattern, AttackPattern::ContainerEscape));
+        assert!(matches!(
+            result.unwrap().pattern,
+            AttackPattern::ContainerEscape
+        ));
     }
 
     #[test]

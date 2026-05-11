@@ -39,11 +39,21 @@ pub struct NetworkContext {
 
 impl IncidentBundle {
     pub fn new(pid: u32, event_type: &str) -> Self {
-        let id = format!("{}-{}", pid, SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs());
-        
+        let id = format!(
+            "{}-{}",
+            pid,
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+
         Self {
             id,
-            timestamp: SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs(),
+            timestamp: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
             event_chain: Vec::new(),
             process_tree: ProcessTree::capture(pid),
             network_context: NetworkContext::capture(pid),

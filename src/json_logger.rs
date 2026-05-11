@@ -58,7 +58,14 @@ pub struct SecurityInfo {
 }
 
 #[derive(Clone)]
-pub enum LogFormat { Standard, Splunk, Elk, Datadog, Ocsf, Cef }
+pub enum LogFormat {
+    Standard,
+    Splunk,
+    Elk,
+    Datadog,
+    Ocsf,
+    Cef,
+}
 
 /// JSON Logger writes structured security events to a file or stdout.
 /// Supports log rotation by size.
@@ -78,7 +85,12 @@ impl JsonLogger {
         Self::with_rotation(path, format, 100 * 1024 * 1024, 10) // 100MB, 10 files
     }
 
-    pub fn with_rotation(path: Option<&str>, format: LogFormat, max_size_bytes: u64, max_files: usize) -> Self {
+    pub fn with_rotation(
+        path: Option<&str>,
+        format: LogFormat,
+        max_size_bytes: u64,
+        max_files: usize,
+    ) -> Self {
         match path {
             Some(p) => {
                 if let Some(parent) = Path::new(p).parent() {
@@ -97,9 +109,17 @@ impl JsonLogger {
                 let current_size = fs::metadata(p).map(|m| m.len()).unwrap_or(0);
 
                 if file.is_some() {
-                    log::info!("📝 JSON logging enabled: {} (rotation: {}MB × {})", p, max_size_bytes / (1024 * 1024), max_files);
+                    log::info!(
+                        "📝 JSON logging enabled: {} (rotation: {}MB × {})",
+                        p,
+                        max_size_bytes / (1024 * 1024),
+                        max_files
+                    );
                 } else {
-                    log::warn!("⚠️  Could not open JSON log file: {}, falling back to stdout", p);
+                    log::warn!(
+                        "⚠️  Could not open JSON log file: {}, falling back to stdout",
+                        p
+                    );
                 }
 
                 Self {
@@ -141,8 +161,15 @@ impl JsonLogger {
                 let elk_event = ElkEvent {
                     timestamp: event.timestamp.clone(),
                     event_type: event.event_type.clone(),
-                    process: ProcessInfo { pid: event.pid, name: event.comm.clone() },
-                    security: SecurityInfo { blocked: event.blocked, action: event.action.clone(), cgroup_id: event.cgroup_id },
+                    process: ProcessInfo {
+                        pid: event.pid,
+                        name: event.comm.clone(),
+                    },
+                    security: SecurityInfo {
+                        blocked: event.blocked,
+                        action: event.action.clone(),
+                        cgroup_id: event.cgroup_id,
+                    },
                 };
                 serde_json::to_string(&elk_event).ok()
             }
@@ -173,18 +200,24 @@ impl JsonLogger {
     }
 
     fn maybe_rotate(&self) {
-        let should_rotate = self.bytes_written.lock()
+        let should_rotate = self
+            .bytes_written
+            .lock()
             .map(|w| *w >= self.max_size_bytes)
             .unwrap_or(false);
 
-        if !should_rotate { return; }
+        if !should_rotate {
+            return;
+        }
 
         if let Some(ref path) = self.file_path {
             // Rotate: .1 → .2, .0 → .1, current → .0
             for i in (1..self.max_files).rev() {
                 let old = path.with_extension(format!("json.{}", i - 1));
                 let new = path.with_extension(format!("json.{}", i));
-                if old.exists() { let _ = fs::rename(&old, &new); }
+                if old.exists() {
+                    let _ = fs::rename(&old, &new);
+                }
             }
 
             let rotated = path.with_extension("json.0");
@@ -210,7 +243,9 @@ impl JsonLogger {
 
             // Delete old rotated files beyond max_files
             let oldest = path.with_extension(format!("json.{}", self.max_files));
-            if oldest.exists() { let _ = fs::remove_file(&oldest); }
+            if oldest.exists() {
+                let _ = fs::remove_file(&oldest);
+            }
 
             log::info!("📝 Log rotated: {}", path.display());
         }
@@ -243,8 +278,14 @@ impl JsonLogger {
         let severity = if event.blocked { "8" } else { "3" };
         format!(
             "CEF:0|NexusAxiom|Security|1.0|{}|{}|{}|pid={} uid={} comm={} blocked={} cgroup={}",
-            event.event_type, event.action, severity,
-            event.pid, event.uid, event.comm, event.blocked, event.cgroup_id
+            event.event_type,
+            event.action,
+            severity,
+            event.pid,
+            event.uid,
+            event.comm,
+            event.blocked,
+            event.cgroup_id
         )
     }
 
@@ -268,7 +309,8 @@ impl Clone for JsonEvent {
         Self {
             timestamp: self.timestamp.clone(),
             event_type: self.event_type.clone(),
-            pid: self.pid, uid: self.uid,
+            pid: self.pid,
+            uid: self.uid,
             comm: self.comm.clone(),
             action: self.action.clone(),
             blocked: self.blocked,
@@ -290,7 +332,8 @@ mod tests {
         let event = JsonEvent {
             timestamp: "2026-05-05T00:00:00Z".to_string(),
             event_type: "mmap".to_string(),
-            pid: 1234, uid: 0,
+            pid: 1234,
+            uid: 0,
             comm: "exploit".to_string(),
             action: "blocked".to_string(),
             blocked: true,
@@ -315,10 +358,16 @@ mod tests {
         let event = JsonEvent {
             timestamp: "2026-01-01T00:00:00Z".into(),
             event_type: "W^X_MMAP".into(),
-            pid: 42, uid: 0, comm: "test".into(),
-            action: "blocked".into(), blocked: true, cgroup_id: 1,
-            details: None, correlation_id: None,
-            ml_confidence: None, mitre_technique: None,
+            pid: 42,
+            uid: 0,
+            comm: "test".into(),
+            action: "blocked".into(),
+            blocked: true,
+            cgroup_id: 1,
+            details: None,
+            correlation_id: None,
+            ml_confidence: None,
+            mitre_technique: None,
         };
         let cef = JsonLogger::format_cef(&event);
         assert!(cef.starts_with("CEF:0|NexusAxiom"));

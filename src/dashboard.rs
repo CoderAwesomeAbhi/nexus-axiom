@@ -132,7 +132,11 @@ fn start_ws_server(port: u16) {
     let listener = match TcpListener::bind(format!("0.0.0.0:{}", port)) {
         Ok(l) => l,
         Err(e) => {
-            log::warn!("⚠️  WebSocket server could not bind on port {}: {}", port, e);
+            log::warn!(
+                "⚠️  WebSocket server could not bind on port {}: {}",
+                port,
+                e
+            );
             return;
         }
     };
@@ -209,12 +213,28 @@ fn base64_encode(data: &[u8]) -> String {
     let mut i = 0;
     while i < data.len() {
         let b0 = data[i] as u32;
-        let b1 = if i + 1 < data.len() { data[i + 1] as u32 } else { 0 };
-        let b2 = if i + 2 < data.len() { data[i + 2] as u32 } else { 0 };
+        let b1 = if i + 1 < data.len() {
+            data[i + 1] as u32
+        } else {
+            0
+        };
+        let b2 = if i + 2 < data.len() {
+            data[i + 2] as u32
+        } else {
+            0
+        };
         out.push(TABLE[((b0 >> 2) & 0x3f) as usize] as char);
         out.push(TABLE[(((b0 << 4) | (b1 >> 4)) & 0x3f) as usize] as char);
-        out.push(if i + 1 < data.len() { TABLE[(((b1 << 2) | (b2 >> 6)) & 0x3f) as usize] as char } else { '=' });
-        out.push(if i + 2 < data.len() { TABLE[(b2 & 0x3f) as usize] as char } else { '=' });
+        out.push(if i + 1 < data.len() {
+            TABLE[(((b1 << 2) | (b2 >> 6)) & 0x3f) as usize] as char
+        } else {
+            '='
+        });
+        out.push(if i + 2 < data.len() {
+            TABLE[(b2 & 0x3f) as usize] as char
+        } else {
+            '='
+        });
         i += 3;
     }
     out
@@ -250,7 +270,9 @@ mod sha1_smol {
     }
     pub struct Digest([u8; 20]);
     impl Digest {
-        pub fn bytes(self) -> [u8; 20] { self.0 }
+        pub fn bytes(self) -> [u8; 20] {
+            self.0
+        }
     }
     impl Sha1 {
         pub fn new() -> Self {
@@ -259,36 +281,66 @@ mod sha1_smol {
                 data: Vec::new(),
             }
         }
-        pub fn update(&mut self, data: &[u8]) { self.data.extend_from_slice(data); }
+        pub fn update(&mut self, data: &[u8]) {
+            self.data.extend_from_slice(data);
+        }
         pub fn digest(mut self) -> Digest {
             let bit_len = (self.data.len() as u64) * 8;
             self.data.push(0x80);
-            while self.data.len() % 64 != 56 { self.data.push(0); }
-            for i in (0..8).rev() { self.data.push(((bit_len >> (i * 8)) & 0xff) as u8); }
+            while self.data.len() % 64 != 56 {
+                self.data.push(0);
+            }
+            for i in (0..8).rev() {
+                self.data.push(((bit_len >> (i * 8)) & 0xff) as u8);
+            }
             for chunk in self.data.chunks(64) {
                 let mut w = [0u32; 80];
                 for i in 0..16 {
-                    w[i] = u32::from_be_bytes([chunk[i*4], chunk[i*4+1], chunk[i*4+2], chunk[i*4+3]]);
+                    w[i] = u32::from_be_bytes([
+                        chunk[i * 4],
+                        chunk[i * 4 + 1],
+                        chunk[i * 4 + 2],
+                        chunk[i * 4 + 3],
+                    ]);
                 }
-                for i in 16..80 { w[i] = (w[i-3]^w[i-8]^w[i-14]^w[i-16]).rotate_left(1); }
-                let (mut a,mut b,mut c,mut d,mut e) = (self.state[0],self.state[1],self.state[2],self.state[3],self.state[4]);
+                for i in 16..80 {
+                    w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
+                }
+                let (mut a, mut b, mut c, mut d, mut e) = (
+                    self.state[0],
+                    self.state[1],
+                    self.state[2],
+                    self.state[3],
+                    self.state[4],
+                );
                 for i in 0..80 {
                     let (f, k) = match i {
-                        0..=19  => ((b&c)|((!b)&d), 0x5A827999u32),
-                        20..=39 => (b^c^d,          0x6ED9EBA1),
-                        40..=59 => ((b&c)|(b&d)|(c&d), 0x8F1BBCDC),
-                        _       => (b^c^d,          0xCA62C1D6),
+                        0..=19 => ((b & c) | ((!b) & d), 0x5A827999u32),
+                        20..=39 => (b ^ c ^ d, 0x6ED9EBA1),
+                        40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1BBCDC),
+                        _ => (b ^ c ^ d, 0xCA62C1D6),
                     };
-                    let temp = a.rotate_left(5).wrapping_add(f).wrapping_add(e).wrapping_add(k).wrapping_add(w[i]);
-                    e=d; d=c; c=b.rotate_left(30); b=a; a=temp;
+                    let temp = a
+                        .rotate_left(5)
+                        .wrapping_add(f)
+                        .wrapping_add(e)
+                        .wrapping_add(k)
+                        .wrapping_add(w[i]);
+                    e = d;
+                    d = c;
+                    c = b.rotate_left(30);
+                    b = a;
+                    a = temp;
                 }
-                self.state[0]=self.state[0].wrapping_add(a); self.state[1]=self.state[1].wrapping_add(b);
-                self.state[2]=self.state[2].wrapping_add(c); self.state[3]=self.state[3].wrapping_add(d);
-                self.state[4]=self.state[4].wrapping_add(e);
+                self.state[0] = self.state[0].wrapping_add(a);
+                self.state[1] = self.state[1].wrapping_add(b);
+                self.state[2] = self.state[2].wrapping_add(c);
+                self.state[3] = self.state[3].wrapping_add(d);
+                self.state[4] = self.state[4].wrapping_add(e);
             }
             let mut out = [0u8; 20];
             for (i, &s) in self.state.iter().enumerate() {
-                out[i*4..i*4+4].copy_from_slice(&s.to_be_bytes());
+                out[i * 4..i * 4 + 4].copy_from_slice(&s.to_be_bytes());
             }
             Digest(out)
         }
@@ -303,8 +355,12 @@ mod tests {
     #[test]
     fn test_dashboard_html_generation() {
         let metrics = Arc::new(crate::metrics::MetricsServer::new());
-        metrics.blocked_events.store(5, std::sync::atomic::Ordering::Relaxed);
-        metrics.total_events.store(10, std::sync::atomic::Ordering::Relaxed);
+        metrics
+            .blocked_events
+            .store(5, std::sync::atomic::Ordering::Relaxed);
+        metrics
+            .total_events
+            .store(10, std::sync::atomic::Ordering::Relaxed);
         let html = Dashboard::generate_html(&metrics);
         assert!(html.contains("Nexus Axiom"));
         assert!(html.contains(">5<"));

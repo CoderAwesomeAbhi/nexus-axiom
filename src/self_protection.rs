@@ -30,7 +30,10 @@ impl SelfProtection {
     /// Snapshot config file hash at startup.
     pub fn snapshot_config(&mut self, config_path: &str) {
         self.config_hash = Self::hash_file(config_path);
-        log::info!("🔐 Config hash snapshot: {}", self.config_hash.as_deref().unwrap_or("none"));
+        log::info!(
+            "🔐 Config hash snapshot: {}",
+            self.config_hash.as_deref().unwrap_or("none")
+        );
     }
 
     pub fn check_integrity(&self) -> Result<Vec<TamperAttempt>> {
@@ -118,10 +121,16 @@ impl SelfProtection {
             }
             TamperAttempt::UnauthorizedBpfSyscall(pid) => {
                 log::warn!("⚠️  Unauthorized BPF access from PID {}", pid);
-                unsafe { libc::kill(*pid as i32, libc::SIGKILL); }
+                unsafe {
+                    libc::kill(*pid as i32, libc::SIGKILL);
+                }
             }
             TamperAttempt::BinaryModified { expected, actual } => {
-                log::error!("🚨 CRITICAL: Binary modified! Expected: {}.. Got: {}..", &expected[..8], &actual[..8]);
+                log::error!(
+                    "🚨 CRITICAL: Binary modified! Expected: {}.. Got: {}..",
+                    &expected[..8],
+                    &actual[..8]
+                );
             }
             TamperAttempt::ConfigModified(path) => {
                 log::error!("🚨 Config file tampered: {}", path);

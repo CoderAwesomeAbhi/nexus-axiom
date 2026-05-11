@@ -65,8 +65,10 @@ impl AdvancedDetector {
                 known_malicious_ips: Vec::new(),
                 known_malicious_hashes: Vec::new(),
                 mining_pool_domains: vec![
-                    "pool.minexmr.com".into(), "xmr.pool.minergate.com".into(),
-                    "monerohash.com".into(), "stratum+tcp://".into(),
+                    "pool.minexmr.com".into(),
+                    "xmr.pool.minergate.com".into(),
+                    "monerohash.com".into(),
+                    "stratum+tcp://".into(),
                 ],
                 cve_signatures: HashMap::new(),
             },
@@ -81,13 +83,21 @@ impl AdvancedDetector {
     /// WARNING: This function requires reading the process stack via ptrace,
     /// which is not currently implemented in the fast-path eBPF hook.
     /// Planned for a future release.
-    pub fn detect_rop_chain(&self, _stack_addresses: &[u64], _exec_regions: &[(u64, u64)]) -> Option<ThreatDetection> {
+    pub fn detect_rop_chain(
+        &self,
+        _stack_addresses: &[u64],
+        _exec_regions: &[(u64, u64)],
+    ) -> Option<ThreatDetection> {
         None
     }
 
     /// Detect JOP (Jump-Oriented Programming) attacks
     /// Planned for future release.
-    pub fn detect_jop_chain(&self, _indirect_calls: &[u64], _exec_regions: &[(u64, u64)]) -> Option<ThreatDetection> {
+    pub fn detect_jop_chain(
+        &self,
+        _indirect_calls: &[u64],
+        _exec_regions: &[(u64, u64)],
+    ) -> Option<ThreatDetection> {
         None
     }
 
@@ -99,7 +109,11 @@ impl AdvancedDetector {
 
     // ── Container Escape Detection ───────────────────────────────────────────
 
-    pub fn detect_container_escape(&self, syscall_trace: &[u64], namespaces_changed: bool) -> Option<ThreatDetection> {
+    pub fn detect_container_escape(
+        &self,
+        syscall_trace: &[u64],
+        namespaces_changed: bool,
+    ) -> Option<ThreatDetection> {
         let mut score: f32 = 0.0;
         let mut indicators = Vec::new();
 
@@ -114,7 +128,10 @@ impl AdvancedDetector {
         let setns_count = syscall_trace.iter().filter(|&&s| s == 308).count();
         if setns_count > 0 {
             score += 0.35;
-            indicators.push(format!("{} setns() calls — namespace manipulation", setns_count));
+            indicators.push(format!(
+                "{} setns() calls — namespace manipulation",
+                setns_count
+            ));
         }
 
         // mount (165) inside container
@@ -154,7 +171,10 @@ impl AdvancedDetector {
                 threat_type: ThreatType::FilelessMalware,
                 confidence: 0.85,
                 indicators: vec![
-                    format!("memfd_create({}) + execveat({}) = memory-only execution", memfd_count, execveat_count),
+                    format!(
+                        "memfd_create({}) + execveat({}) = memory-only execution",
+                        memfd_count, execveat_count
+                    ),
                     "No file on disk — fileless malware pattern".into(),
                 ],
                 severity: "critical".into(),
@@ -170,7 +190,7 @@ impl AdvancedDetector {
                 threat_type: ThreatType::FilelessMalware,
                 confidence: 0.75,
                 indicators: vec![
-                    "memfd_create + write pattern (preparing in-memory payload)".into(),
+                    "memfd_create + write pattern (preparing in-memory payload)".into()
                 ],
                 severity: "high".into(),
                 recommended_action: "Monitor process, prepare containment".into(),
@@ -182,7 +202,11 @@ impl AdvancedDetector {
 
     // ── Crypto-Mining Detection ──────────────────────────────────────────────
 
-    pub fn detect_crypto_mining(&self, network_connections: &[String], cpu_usage_percent: f32) -> Option<ThreatDetection> {
+    pub fn detect_crypto_mining(
+        &self,
+        network_connections: &[String],
+        cpu_usage_percent: f32,
+    ) -> Option<ThreatDetection> {
         let mut indicators = Vec::new();
         let mut score: f32 = 0.0;
 
@@ -196,7 +220,10 @@ impl AdvancedDetector {
                 }
             }
             // Stratum protocol detection
-            if conn_lower.contains("stratum") || conn_lower.contains(":3333") || conn_lower.contains(":14444") {
+            if conn_lower.contains("stratum")
+                || conn_lower.contains(":3333")
+                || conn_lower.contains(":14444")
+            {
                 score += 0.30;
                 indicators.push(format!("Stratum mining protocol detected: {}", conn));
             }
@@ -224,16 +251,30 @@ impl AdvancedDetector {
     // ── Side-Channel Detection ───────────────────────────────────────────────
 
     pub fn detect_side_channel(&self, timing_data: &[u64]) -> Option<ThreatDetection> {
-        if timing_data.len() < 10 { return None; }
+        if timing_data.len() < 10 {
+            return None;
+        }
 
-        let mean: f64 = timing_data.iter().map(|&x| x as f64).sum::<f64>() / timing_data.len() as f64;
-        let variance: f64 = timing_data.iter()
-            .map(|&x| { let d = x as f64 - mean; d * d })
-            .sum::<f64>() / timing_data.len() as f64;
+        let mean: f64 =
+            timing_data.iter().map(|&x| x as f64).sum::<f64>() / timing_data.len() as f64;
+        let variance: f64 = timing_data
+            .iter()
+            .map(|&x| {
+                let d = x as f64 - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / timing_data.len() as f64;
 
         // Bimodal distribution check (cache hit vs miss)
-        let below_mean = timing_data.iter().filter(|&&x| (x as f64) < mean * 0.7).count();
-        let above_mean = timing_data.iter().filter(|&&x| (x as f64) > mean * 1.3).count();
+        let below_mean = timing_data
+            .iter()
+            .filter(|&&x| (x as f64) < mean * 0.7)
+            .count();
+        let above_mean = timing_data
+            .iter()
+            .filter(|&&x| (x as f64) > mean * 1.3)
+            .count();
         let bimodal_ratio = (below_mean.min(above_mean) as f64) / (timing_data.len() as f64);
 
         if variance > self.timing_variance_threshold && bimodal_ratio > 0.2 {
@@ -242,7 +283,10 @@ impl AdvancedDetector {
                 confidence: ((bimodal_ratio * 2.0) as f32).min(0.9),
                 indicators: vec![
                     format!("Bimodal timing distribution (ratio: {:.2})", bimodal_ratio),
-                    format!("Timing variance: {:.2} (threshold: {:.2})", variance, self.timing_variance_threshold),
+                    format!(
+                        "Timing variance: {:.2} (threshold: {:.2})",
+                        variance, self.timing_variance_threshold
+                    ),
                     "Possible Flush+Reload or Prime+Probe cache attack".into(),
                 ],
                 severity: "medium".into(),
@@ -255,7 +299,12 @@ impl AdvancedDetector {
 
     // ── Kernel Exploit Detection ─────────────────────────────────────────────
 
-    pub fn detect_kernel_exploit(&self, syscalls: &[u64], uid_before: u32, uid_after: u32) -> Option<ThreatDetection> {
+    pub fn detect_kernel_exploit(
+        &self,
+        syscalls: &[u64],
+        uid_before: u32,
+        uid_after: u32,
+    ) -> Option<ThreatDetection> {
         let mut indicators = Vec::new();
         let mut score: f32 = 0.0;
 
@@ -267,7 +316,7 @@ impl AdvancedDetector {
 
         // DirtyPipe pattern: open → lseek → splice → write
         let has_splice = syscalls.iter().any(|&s| s == 275); // splice
-        let has_pipe = syscalls.iter().any(|&s| s == 293);   // pipe2
+        let has_pipe = syscalls.iter().any(|&s| s == 293); // pipe2
         if has_splice && has_pipe {
             score += 0.30;
             indicators.push("splice + pipe pattern (DirtyPipe-like)".into());
@@ -302,7 +351,11 @@ impl AdvancedDetector {
 
     // ── Behavioral Anomaly Detection ─────────────────────────────────────────
 
-    pub fn detect_behavioral_anomaly(&mut self, pid: u32, syscall_freq: HashMap<u64, usize>) -> Option<ThreatDetection> {
+    pub fn detect_behavioral_anomaly(
+        &mut self,
+        pid: u32,
+        syscall_freq: HashMap<u64, usize>,
+    ) -> Option<ThreatDetection> {
         if let Some(baseline) = self.behavioral_baseline.get(&pid) {
             let mut anomaly_score: f32 = 0.0;
 
@@ -321,18 +374,26 @@ impl AdvancedDetector {
                         format!("Anomaly score: {:.2}", anomaly_score),
                         "Significant deviation from baseline behavior".into(),
                     ],
-                    severity: if anomaly_score > 5.0 { "high" } else { "medium" }.into(),
+                    severity: if anomaly_score > 5.0 {
+                        "high"
+                    } else {
+                        "medium"
+                    }
+                    .into(),
                     recommended_action: "Investigate process activity".into(),
                     mitre_technique: None,
                 });
             }
         } else {
-            self.behavioral_baseline.insert(pid, ProcessBehavior {
-                syscall_frequency: syscall_freq,
-                memory_access_pattern: Vec::new(),
-                network_connections: Vec::new(),
-                file_operations: Vec::new(),
-            });
+            self.behavioral_baseline.insert(
+                pid,
+                ProcessBehavior {
+                    syscall_frequency: syscall_freq,
+                    memory_access_pattern: Vec::new(),
+                    network_connections: Vec::new(),
+                    file_operations: Vec::new(),
+                },
+            );
         }
         None
     }
@@ -340,7 +401,11 @@ impl AdvancedDetector {
     // ── Threat Intelligence ──────────────────────────────────────────────────
 
     pub fn check_threat_intel(&self, ip: &str, file_hash: &str) -> Option<ThreatDetection> {
-        if self.threat_intel_feed.known_malicious_ips.contains(&ip.to_string()) {
+        if self
+            .threat_intel_feed
+            .known_malicious_ips
+            .contains(&ip.to_string())
+        {
             return Some(ThreatDetection {
                 threat_type: ThreatType::ThreatIntel,
                 confidence: 1.0,
@@ -351,7 +416,12 @@ impl AdvancedDetector {
             });
         }
 
-        if !file_hash.is_empty() && self.threat_intel_feed.known_malicious_hashes.contains(&file_hash.to_string()) {
+        if !file_hash.is_empty()
+            && self
+                .threat_intel_feed
+                .known_malicious_hashes
+                .contains(&file_hash.to_string())
+        {
             return Some(ThreatDetection {
                 threat_type: ThreatType::ThreatIntel,
                 confidence: 1.0,
@@ -373,17 +443,28 @@ impl AdvancedDetector {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     fn shannon_entropy(data: &[u64]) -> f64 {
-        if data.is_empty() { return 0.0; }
+        if data.is_empty() {
+            return 0.0;
+        }
         let mut freq: HashMap<u64, usize> = HashMap::new();
-        for &v in data { *freq.entry(v).or_default() += 1; }
+        for &v in data {
+            *freq.entry(v).or_default() += 1;
+        }
         let len = data.len() as f64;
         freq.values()
-            .map(|&c| { let p = c as f64 / len; -p * p.log2() })
+            .map(|&c| {
+                let p = c as f64 / len;
+                -p * p.log2()
+            })
             .sum()
     }
 }
 
-impl Default for AdvancedDetector { fn default() -> Self { Self::new() } }
+impl Default for AdvancedDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -414,7 +495,10 @@ mod tests {
         let trace = vec![15, 59, 0]; // sigreturn → execve
         let result = d.detect_sigrop(&trace);
         assert!(result.is_some());
-        assert!(matches!(result.unwrap().threat_type, ThreatType::SIGROPAttack));
+        assert!(matches!(
+            result.unwrap().threat_type,
+            ThreatType::SIGROPAttack
+        ));
     }
 
     #[test]

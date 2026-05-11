@@ -1,5 +1,4 @@
 /// audit.rs — Self-audit module that validates Nexus Axiom's own security posture.
-
 use anyhow::Result;
 use serde::Serialize;
 use sha2::Digest;
@@ -25,7 +24,12 @@ pub struct AuditCheck {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
-pub enum AuditStatus { Pass, Fail, Warning, Skip }
+pub enum AuditStatus {
+    Pass,
+    Fail,
+    Warning,
+    Skip,
+}
 
 pub struct SecurityAuditor {
     binary_path: String,
@@ -37,10 +41,15 @@ impl SecurityAuditor {
         let binary_path = std::env::current_exe()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
-        Self { binary_path, config_hash: None }
+        Self {
+            binary_path,
+            config_hash: None,
+        }
     }
 
-    pub fn set_config_hash(&mut self, hash: String) { self.config_hash = Some(hash); }
+    pub fn set_config_hash(&mut self, hash: String) {
+        self.config_hash = Some(hash);
+    }
 
     pub fn run_full_audit(&self) -> AuditReport {
         let mut checks = Vec::new();
@@ -54,16 +63,33 @@ impl SecurityAuditor {
         checks.push(self.check_kernel_config());
         checks.push(self.check_dependencies());
 
-        let passed = checks.iter().filter(|c| c.status == AuditStatus::Pass).count();
-        let failed = checks.iter().filter(|c| c.status == AuditStatus::Fail).count();
-        let warnings = checks.iter().filter(|c| c.status == AuditStatus::Warning).count();
+        let passed = checks
+            .iter()
+            .filter(|c| c.status == AuditStatus::Pass)
+            .count();
+        let failed = checks
+            .iter()
+            .filter(|c| c.status == AuditStatus::Fail)
+            .count();
+        let warnings = checks
+            .iter()
+            .filter(|c| c.status == AuditStatus::Warning)
+            .count();
 
-        let overall = if failed > 0 { "FAIL" } else if warnings > 0 { "WARN" } else { "PASS" };
+        let overall = if failed > 0 {
+            "FAIL"
+        } else if warnings > 0 {
+            "WARN"
+        } else {
+            "PASS"
+        };
 
         AuditReport {
             timestamp: chrono::Utc::now().to_rfc3339(),
             checks,
-            passed, failed, warnings,
+            passed,
+            failed,
+            warnings,
             overall_status: overall.to_string(),
         }
     }
@@ -74,7 +100,8 @@ impl SecurityAuditor {
 
         if self.binary_path.is_empty() {
             return AuditCheck {
-                category, name,
+                category,
+                name,
                 status: AuditStatus::Skip,
                 details: "Could not determine binary path".into(),
                 remediation: None,
@@ -85,14 +112,16 @@ impl SecurityAuditor {
             Ok(data) => {
                 let hash = format!("{:x}", sha2::Sha256::digest(&data));
                 AuditCheck {
-                    category, name,
+                    category,
+                    name,
                     status: AuditStatus::Pass,
                     details: format!("Binary SHA-256: {}", &hash[..16]),
                     remediation: None,
                 }
             }
             Err(e) => AuditCheck {
-                category, name,
+                category,
+                name,
                 status: AuditStatus::Warning,
                 details: format!("Could not read binary: {}", e),
                 remediation: Some("Ensure binary is readable".into()),
@@ -187,7 +216,9 @@ impl SecurityAuditor {
                 name: "Log directory exists".into(),
                 status: AuditStatus::Warning,
                 details: "/var/log/nexus-axiom/ does not exist".into(),
-                remediation: Some("mkdir -p /var/log/nexus-axiom && chmod 750 /var/log/nexus-axiom".into()),
+                remediation: Some(
+                    "mkdir -p /var/log/nexus-axiom && chmod 750 /var/log/nexus-axiom".into(),
+                ),
             }
         }
     }
@@ -230,8 +261,11 @@ impl SecurityAuditor {
         }
         #[cfg(not(target_os = "linux"))]
         AuditCheck {
-            category: "eBPF".into(), name: "eBPF programs loaded".into(),
-            status: AuditStatus::Skip, details: "Not on Linux".into(), remediation: None,
+            category: "eBPF".into(),
+            name: "eBPF programs loaded".into(),
+            status: AuditStatus::Skip,
+            details: "Not on Linux".into(),
+            remediation: None,
         }
     }
 
@@ -259,7 +293,10 @@ impl SecurityAuditor {
                 category: "Network".into(),
                 name: "Port exposure".into(),
                 status: AuditStatus::Pass,
-                details: format!("Ports {:?} are in use (expected for dashboard/metrics)", exposed),
+                details: format!(
+                    "Ports {:?} are in use (expected for dashboard/metrics)",
+                    exposed
+                ),
                 remediation: None,
             }
         }
@@ -288,14 +325,20 @@ impl SecurityAuditor {
             }
         }
         AuditCheck {
-            category: "Kernel".into(), name: "BPF LSM enabled".into(),
-            status: AuditStatus::Skip, details: "Cannot read LSM config".into(), remediation: None,
+            category: "Kernel".into(),
+            name: "BPF LSM enabled".into(),
+            status: AuditStatus::Skip,
+            details: "Cannot read LSM config".into(),
+            remediation: None,
         }
     }
 
     fn check_dependencies(&self) -> AuditCheck {
         // Basic check: verify critical system libraries exist
-        let libs = ["/usr/lib/libbpf.so", "/usr/lib/x86_64-linux-gnu/libbpf.so.1"];
+        let libs = [
+            "/usr/lib/libbpf.so",
+            "/usr/lib/x86_64-linux-gnu/libbpf.so.1",
+        ];
         let found = libs.iter().any(|p| Path::new(p).exists());
         if found {
             AuditCheck {
@@ -317,4 +360,8 @@ impl SecurityAuditor {
     }
 }
 
-impl Default for SecurityAuditor { fn default() -> Self { Self::new() } }
+impl Default for SecurityAuditor {
+    fn default() -> Self {
+        Self::new()
+    }
+}

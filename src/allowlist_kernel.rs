@@ -13,11 +13,11 @@ impl AllowlistKernel {
     pub fn add_to_map(pid: u32) -> Result<()> {
         // Find the allowlist map FD by reading /sys/fs/bpf/
         let map_fd = Self::find_map_fd("allowlist")?;
-        
+
         let key = pid.to_ne_bytes();
         let value: u8 = 1;
         let value_bytes = [value];
-        
+
         let ret = unsafe {
             libc::syscall(
                 libc::SYS_bpf,
@@ -31,21 +31,21 @@ impl AllowlistKernel {
                 std::mem::size_of::<BpfMapUpdateAttr>(),
             )
         };
-        
+
         if ret < 0 {
             anyhow::bail!("BPF syscall failed: {}", std::io::Error::last_os_error());
         }
-        
+
         log::info!("✅ Added PID {} to kernel allowlist map", pid);
         Ok(())
     }
-    
+
     /// Remove PID from kernel allowlist map
     pub fn remove_from_map(pid: u32) -> Result<()> {
         let map_fd = Self::find_map_fd("allowlist")?;
-        
+
         let key = pid.to_ne_bytes();
-        
+
         let ret = unsafe {
             libc::syscall(
                 libc::SYS_bpf,
@@ -57,20 +57,20 @@ impl AllowlistKernel {
                 std::mem::size_of::<BpfMapDeleteAttr>(),
             )
         };
-        
+
         if ret < 0 {
             anyhow::bail!("BPF syscall failed: {}", std::io::Error::last_os_error());
         }
-        
+
         log::info!("✅ Removed PID {} from kernel allowlist map", pid);
         Ok(())
     }
-    
+
     /// Find map FD by name (simplified - in production use libbpf-rs)
     fn find_map_fd(name: &str) -> Result<c_int> {
         // Try to find pinned map in /sys/fs/bpf/
         let pin_path = format!("/sys/fs/bpf/{}", name);
-        
+
         if std::path::Path::new(&pin_path).exists() {
             // Open pinned map
             let fd = unsafe {
@@ -81,12 +81,12 @@ impl AllowlistKernel {
                     pin_path.len(),
                 )
             };
-            
+
             if fd > 0 {
                 return Ok(fd as c_int);
             }
         }
-        
+
         // Fallback: log warning and return dummy FD
         log::warn!("⚠️  Could not find allowlist map FD, allowlist updates may not work");
         log::warn!("   This is expected if eBPF is not loaded yet");

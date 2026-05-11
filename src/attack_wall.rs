@@ -11,7 +11,7 @@ pub struct BlockedAttack {
     pub attack_type: String,
     pub process: String,
     pub severity: String,
-    pub location: String,  // Anonymized: "US-East", "EU-West"
+    pub location: String, // Anonymized: "US-East", "EU-West"
 }
 
 pub struct AttackWall {
@@ -33,12 +33,12 @@ impl AttackWall {
     pub fn record_block(&self, attack: BlockedAttack) {
         let mut attacks = self.attacks.lock().unwrap();
         attacks.push(attack.clone());
-        
+
         // Keep only last 1000
         if attacks.len() > 1000 {
             attacks.remove(0);
         }
-        
+
         // Broadcast to WebSocket clients
         let _ = self.broadcast.send(attack);
     }
@@ -55,13 +55,17 @@ impl AttackWall {
     pub fn stats(&self) -> AttackStats {
         let attacks = self.attacks.lock().unwrap();
         let total = attacks.len();
-        let last_hour = attacks.iter()
+        let last_hour = attacks
+            .iter()
             .filter(|a| {
-                let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+                let now = SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
                 now - a.timestamp < 3600
             })
             .count();
-        
+
         AttackStats {
             total_blocked: total,
             last_hour,

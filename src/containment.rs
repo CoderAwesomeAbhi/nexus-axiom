@@ -40,7 +40,9 @@ pub struct ContainmentEngine {
 
 impl ContainmentEngine {
     pub fn new() -> Self {
-        Self { records: Vec::new() }
+        Self {
+            records: Vec::new(),
+        }
     }
 
     pub fn contain(&mut self, pid: u32, action: ContainmentAction, reason: &str) -> Result<()> {
@@ -83,7 +85,9 @@ impl ContainmentEngine {
     }
 
     fn kill_process(&self, pid: u32) -> Result<()> {
-        unsafe { libc::kill(pid as i32, libc::SIGKILL); }
+        unsafe {
+            libc::kill(pid as i32, libc::SIGKILL);
+        }
         log::info!("💀 Killed process {}", pid);
         Ok(())
     }
@@ -102,7 +106,16 @@ impl ContainmentEngine {
             .args(["netns", "add", &format!("quarantine-{}", pid)])
             .output()?;
         Command::new("nsenter")
-            .args(["-t", &pid.to_string(), "-n", "ip", "link", "set", "lo", "down"])
+            .args([
+                "-t",
+                &pid.to_string(),
+                "-n",
+                "ip",
+                "link",
+                "set",
+                "lo",
+                "down",
+            ])
             .output()?;
         log::info!("🚫 Quarantined network for process {}", pid);
         Ok(())
@@ -112,7 +125,7 @@ impl ContainmentEngine {
         let cgroup_path = format!("/sys/fs/cgroup/nexus-isolated-{}", pid);
         fs::create_dir_all(&cgroup_path)?;
         fs::write(format!("{}/cpu.max", cgroup_path), "10000 1000000")?; // 1% CPU
-        fs::write(format!("{}/memory.max", cgroup_path), "10485760")?;   // 10MB
+        fs::write(format!("{}/memory.max", cgroup_path), "10485760")?; // 10MB
         fs::write(format!("{}/cgroup.procs", cgroup_path), pid.to_string())?;
         log::info!("🔒 Isolated process {} in restricted cgroup", pid);
         Ok(())
@@ -120,21 +133,29 @@ impl ContainmentEngine {
 
     fn capture_forensic_snapshot(&self, pid: u32) -> Option<ForensicSnapshot> {
         let proc_path = format!("/proc/{}", pid);
-        if !std::path::Path::new(&proc_path).exists() { return None; }
+        if !std::path::Path::new(&proc_path).exists() {
+            return None;
+        }
 
         let cmdline = fs::read_to_string(format!("{}/cmdline", proc_path))
             .unwrap_or_default()
             .replace('\0', " ");
         let status = fs::read_to_string(format!("{}/status", proc_path))
             .unwrap_or_default()
-            .lines().take(10).collect::<Vec<_>>().join("\n");
+            .lines()
+            .take(10)
+            .collect::<Vec<_>>()
+            .join("\n");
         let maps = fs::read_to_string(format!("{}/maps", proc_path))
             .map(|m| format!("{} regions", m.lines().count()))
             .unwrap_or_else(|_| "unavailable".into());
         let fds = fs::read_dir(format!("{}/fd", proc_path))
-            .map(|d| d.count()).unwrap_or(0);
+            .map(|d| d.count())
+            .unwrap_or(0);
         let cgroup = fs::read_to_string(format!("{}/cgroup", proc_path))
-            .unwrap_or_default().trim().to_string();
+            .unwrap_or_default()
+            .trim()
+            .to_string();
 
         Some(ForensicSnapshot {
             pid,
@@ -168,4 +189,8 @@ impl ContainmentEngine {
     }
 }
 
-impl Default for ContainmentEngine { fn default() -> Self { Self::new() } }
+impl Default for ContainmentEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}

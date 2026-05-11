@@ -1,7 +1,7 @@
 // Policy DSL: Human-readable security policies
 // Example: workload:web can mmap wx=deny uid:1000 can exec allow
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,7 +76,11 @@ impl Rule {
         let operation = Operation::parse(parts[2])?;
         let action = Action::parse(parts[3])?;
 
-        Ok(Rule { selector, action, operation })
+        Ok(Rule {
+            selector,
+            action,
+            operation,
+        })
     }
 
     fn matches(&self, sel: &Selector, op: &Operation) -> bool {
@@ -155,10 +159,7 @@ mod tests {
     fn test_evaluate_deny() {
         let input = "workload:web can mmap wx=deny";
         let policy = Policy::parse(input).unwrap();
-        let action = policy.evaluate(
-            &Selector::Workload("web".to_string()),
-            &Operation::MmapWX,
-        );
+        let action = policy.evaluate(&Selector::Workload("web".to_string()), &Operation::MmapWX);
         assert!(matches!(action, Action::Deny));
     }
 
@@ -166,20 +167,14 @@ mod tests {
     fn test_evaluate_allow() {
         let input = "uid:1000 can exec allow";
         let policy = Policy::parse(input).unwrap();
-        let action = policy.evaluate(
-            &Selector::Uid(1000),
-            &Operation::Exec,
-        );
+        let action = policy.evaluate(&Selector::Uid(1000), &Operation::Exec);
         assert!(matches!(action, Action::Allow));
     }
 
     #[test]
     fn test_evaluate_default_deny() {
         let policy = Policy { rules: Vec::new() };
-        let action = policy.evaluate(
-            &Selector::Uid(9999),
-            &Operation::MmapWX,
-        );
+        let action = policy.evaluate(&Selector::Uid(9999), &Operation::MmapWX);
         assert!(matches!(action, Action::Deny));
     }
 
@@ -187,10 +182,7 @@ mod tests {
     fn test_wildcard_selector() {
         let input = "all can ptrace audit";
         let policy = Policy::parse(input).unwrap();
-        let action = policy.evaluate(
-            &Selector::Uid(42),
-            &Operation::Ptrace,
-        );
+        let action = policy.evaluate(&Selector::Uid(42), &Operation::Ptrace);
         assert!(matches!(action, Action::Audit));
     }
 }

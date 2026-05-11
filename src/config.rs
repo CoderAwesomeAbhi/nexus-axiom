@@ -46,7 +46,10 @@ pub struct LogRotationConfig {
 
 impl Default for LogRotationConfig {
     fn default() -> Self {
-        Self { max_size_mb: 100, max_files: 10 }
+        Self {
+            max_size_mb: 100,
+            max_files: 10,
+        }
     }
 }
 
@@ -76,7 +79,11 @@ pub struct MlConfig {
 
 impl Default for MlConfig {
     fn default() -> Self {
-        Self { enabled: true, prediction_interval_ms: 500, threat_threshold: 0.65 }
+        Self {
+            enabled: true,
+            prediction_interval_ms: 500,
+            threat_threshold: 0.65,
+        }
     }
 }
 
@@ -90,7 +97,12 @@ pub struct HaConfig {
 
 impl Default for HaConfig {
     fn default() -> Self {
-        Self { enabled: false, heartbeat_interval_secs: 5, failover_timeout_secs: 15, health_port: 9091 }
+        Self {
+            enabled: false,
+            heartbeat_interval_secs: 5,
+            failover_timeout_secs: 15,
+            health_port: 9091,
+        }
     }
 }
 

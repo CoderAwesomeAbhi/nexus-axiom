@@ -1,8 +1,8 @@
 // Compliance & Audit Logging: SOC2, ISO27001, GDPR, HIPAA
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::Write;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditLog {
@@ -65,25 +65,29 @@ impl ComplianceManager {
             retention_days,
         }
     }
-    
+
     /// Log audit event
     pub fn log_audit(&self, log: AuditLog) -> anyhow::Result<()> {
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.audit_log_path)?;
-        
+
         let json = serde_json::to_string(&log)?;
         writeln!(file, "{}", json)?;
-        
+
         log::debug!("Audit log: {} - {}", log.user_id, log.action);
         Ok(())
     }
-    
+
     /// Generate SOC2 compliance report
-    pub fn generate_soc2_report(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> ComplianceReport {
+    pub fn generate_soc2_report(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> ComplianceReport {
         let mut findings = Vec::new();
-        
+
         // CC6.1: Logical and Physical Access Controls
         findings.push(ComplianceFinding {
             control_id: "CC6.1".to_string(),
@@ -95,7 +99,7 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         // CC6.6: Logical and Physical Access Controls - Audit Logging
         findings.push(ComplianceFinding {
             control_id: "CC6.6".to_string(),
@@ -107,7 +111,7 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         // CC7.2: System Monitoring
         findings.push(ComplianceFinding {
             control_id: "CC7.2".to_string(),
@@ -120,12 +124,12 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         let passed = findings.iter().filter(|f| f.status == "pass").count();
         let failed = findings.iter().filter(|f| f.status == "fail").count();
         let warnings = findings.iter().filter(|f| f.status == "warning").count();
         let total = findings.len();
-        
+
         ComplianceReport {
             report_type: ComplianceType::SOC2,
             period_start: start,
@@ -140,11 +144,15 @@ impl ComplianceManager {
             },
         }
     }
-    
+
     /// Generate ISO27001 compliance report
-    pub fn generate_iso27001_report(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> ComplianceReport {
+    pub fn generate_iso27001_report(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> ComplianceReport {
         let mut findings = Vec::new();
-        
+
         // A.9.2.1: User registration and de-registration
         findings.push(ComplianceFinding {
             control_id: "A.9.2.1".to_string(),
@@ -156,7 +164,7 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         // A.12.4.1: Event logging
         findings.push(ComplianceFinding {
             control_id: "A.12.4.1".to_string(),
@@ -168,7 +176,7 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         // A.12.4.3: Administrator and operator logs
         findings.push(ComplianceFinding {
             control_id: "A.12.4.3".to_string(),
@@ -180,12 +188,12 @@ impl ComplianceManager {
             ],
             remediation: None,
         });
-        
+
         let passed = findings.iter().filter(|f| f.status == "pass").count();
         let failed = findings.iter().filter(|f| f.status == "fail").count();
         let warnings = findings.iter().filter(|f| f.status == "warning").count();
         let total = findings.len();
-        
+
         ComplianceReport {
             report_type: ComplianceType::ISO27001,
             period_start: start,
@@ -200,12 +208,16 @@ impl ComplianceManager {
             },
         }
     }
-    
+
     /// Export audit logs for forensic analysis
-    pub fn export_forensic_data(&self, start: DateTime<Utc>, end: DateTime<Utc>) -> anyhow::Result<Vec<AuditLog>> {
+    pub fn export_forensic_data(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<AuditLog>> {
         let file_content = std::fs::read_to_string(&self.audit_log_path)?;
         let mut logs = Vec::new();
-        
+
         for line in file_content.lines() {
             if let Ok(log) = serde_json::from_str::<AuditLog>(line) {
                 if log.timestamp >= start && log.timestamp <= end {
@@ -213,10 +225,10 @@ impl ComplianceManager {
                 }
             }
         }
-        
+
         Ok(logs)
     }
-    
+
     /// Chain of custody for legal hold
     pub fn create_chain_of_custody(&self, case_id: &str, logs: &[AuditLog]) -> ChainOfCustody {
         ChainOfCustody {
@@ -231,7 +243,7 @@ impl ComplianceManager {
             }),
         }
     }
-    
+
     fn calculate_hash(&self, logs: &[AuditLog]) -> String {
         use sha2::Digest;
         let mut hasher = sha2::Sha256::new();

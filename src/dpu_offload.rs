@@ -36,7 +36,7 @@ impl DpuOffload {
                 return Ok(true);
             }
         }
-        
+
         Ok(false)
     }
 
@@ -48,7 +48,7 @@ impl DpuOffload {
         // Send event to DPU for processing
         // DPU does deep inspection without host CPU overhead
         log::debug!("Offloading event to DPU");
-        
+
         Ok(())
     }
 }

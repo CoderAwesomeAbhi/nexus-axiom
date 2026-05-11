@@ -29,13 +29,23 @@ impl QuantumCrypto {
         }
     }
 
-    pub fn sign_event(&self, event_type: u32, pid: u32, uid: u32, comm: &str, blocked: bool) -> QuantumSecurityEvent {
+    pub fn sign_event(
+        &self,
+        event_type: u32,
+        pid: u32,
+        uid: u32,
+        comm: &str,
+        blocked: bool,
+    ) -> QuantumSecurityEvent {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let msg = format!("{}:{}:{}:{}:{}:{}", event_type, pid, uid, comm, blocked, timestamp);
+        let msg = format!(
+            "{}:{}:{}:{}:{}:{}",
+            event_type, pid, uid, comm, blocked, timestamp
+        );
         let signed = sign(msg.as_bytes(), &self.keypair.secret);
 
         QuantumSecurityEvent {
@@ -50,11 +60,11 @@ impl QuantumCrypto {
     }
 
     pub fn verify_event(&self, event: &QuantumSecurityEvent) -> bool {
-        let msg = format!("{}:{}:{}:{}:{}:{}", 
-            event.event_type, event.pid, event.uid, 
-            event.comm, event.blocked, event.timestamp
+        let msg = format!(
+            "{}:{}:{}:{}:{}:{}",
+            event.event_type, event.pid, event.uid, event.comm, event.blocked, event.timestamp
         );
-        
+
         open(&event.signature, &self.keypair.public).is_ok()
     }
 

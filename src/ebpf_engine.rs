@@ -103,17 +103,17 @@ impl EbpfEngine {
     /// Load allowlist from disk and sync to kernel map
     pub fn load_allowlist_from_disk(&self) -> Result<()> {
         use std::path::Path;
-        
+
         let allowlist_path = Path::new("/var/lib/nexus-axiom/allowlist.json");
-        
+
         if !allowlist_path.exists() {
             log::debug!("No allowlist file found, skipping");
             return Ok(());
         }
-        
+
         let content = std::fs::read_to_string(allowlist_path)?;
         let pids: Vec<u32> = serde_json::from_str(&content)?;
-        
+
         let mut loaded = 0;
         for pid in pids {
             // Check if process still exists
@@ -125,11 +125,11 @@ impl EbpfEngine {
                 }
             }
         }
-        
+
         if loaded > 0 {
             log::info!("✅ Loaded {} PIDs from allowlist into kernel map", loaded);
         }
-        
+
         Ok(())
     }
 
@@ -327,7 +327,8 @@ fn handle_event(
         if pred.threat_level.is_alert_worthy() && event.blocked == 0 {
             log::warn!(
                 "🔮 PREDICTED ATTACK — {} (PID: {}) | {:.0}% confidence | {} | source: {:?}",
-                comm, event.pid,
+                comm,
+                event.pid,
                 pred.confidence * 100.0,
                 pred.attack_type,
                 pred.source,
@@ -339,7 +340,11 @@ fn handle_event(
                 event.pid,
                 event.uid,
                 &comm,
-                &format!("confidence={:.0}% threat={}", pred.confidence * 100.0, pred.threat_level.as_str()),
+                &format!(
+                    "confidence={:.0}% threat={}",
+                    pred.confidence * 100.0,
+                    pred.threat_level.as_str()
+                ),
                 "",
             ));
         }
