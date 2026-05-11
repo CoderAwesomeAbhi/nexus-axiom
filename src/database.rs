@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 // Using rusqlite for embedded database (no external dependencies)
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::rbac::{Permission, Role, Tenant, User};
 
