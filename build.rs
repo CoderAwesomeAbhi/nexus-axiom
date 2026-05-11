@@ -18,6 +18,7 @@ fn main() {
     out_lsm.push("nexus_working.skel.rs");
     SkeletonBuilder::new()
         .source(SRC_LSM)
+        .clang_args("-I/usr/include/x86_64-linux-gnu -I/usr/include")
         .build_and_generate(&out_lsm)
         .expect("failed to generate LSM skeleton from ebpf/nexus_working.bpf.c");
     println!("cargo:rerun-if-changed={}", SRC_LSM);
@@ -26,6 +27,7 @@ fn main() {
     out_xdp.push("nexus_net.skel.rs");
     SkeletonBuilder::new()
         .source(SRC_XDP)
+        .clang_args("-I/usr/include/x86_64-linux-gnu -I/usr/include")
         .build_and_generate(&out_xdp)
         .expect("failed to generate XDP skeleton from ebpf/nexus_net.bpf.c");
     println!("cargo:rerun-if-changed={}", SRC_XDP);
