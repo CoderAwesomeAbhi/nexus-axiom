@@ -146,7 +146,7 @@ impl RandomForest {
     /// Build pre-trained forest. Thresholds derived from security telemetry patterns.
     fn pretrained() -> Self {
         Self {
-            trees: pretrained_trees(),
+            trees: Self::pretrained_trees(),
         }
     }
 

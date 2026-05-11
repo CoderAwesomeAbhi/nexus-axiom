@@ -56,7 +56,7 @@ impl SeccompMode {
             let decision = self.evaluate(&notification);
 
             // Send response
-            let response = if decision {
+            let response: &[u8] = if decision {
                 b"ALLOW"
             } else {
                 log::warn!("🚫 Blocked W^X attempt from client");

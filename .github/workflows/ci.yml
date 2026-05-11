@@ -42,7 +42,7 @@ jobs:
         - name: Install dependencies
           run: |
             sudo apt-get update
-            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev
+            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev libseccomp-dev
         - name: Run clippy
           run: cargo clippy --bins --all-features || true
 
@@ -55,7 +55,7 @@ jobs:
         - name: Install dependencies
           run: |
             sudo apt-get update
-            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev
+            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev libseccomp-dev
         - name: Run tests
           run: cargo test --bins || echo "Tests require BPF LSM kernel"
 
@@ -79,7 +79,7 @@ jobs:
         - name: Install dependencies
           run: |
             sudo apt-get update
-            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev
+            sudo apt-get install -y clang llvm libelf-dev linux-headers-generic linux-libc-dev libc6-dev pkg-config libbpf-dev libseccomp-dev
         - name: Build
           run: cargo build --release || cargo build
         - name: Run verification suite

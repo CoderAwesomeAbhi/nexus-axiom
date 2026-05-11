@@ -415,6 +415,9 @@ fn handle_event(
                     "prot=0x{:02x} flags=0x{:02x}",
                     event.prot, event.flags
                 )),
+                correlation_id: None,
+                ml_confidence: None,
+                mitre_technique: None,
             };
             logger.log_event(&json_event);
         }
