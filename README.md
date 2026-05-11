@@ -1,242 +1,277 @@
 <div align="center">
 
-<img src="assets/logo.png" alt="Nexus Axiom Logo" width="180" style="border-radius: 20px"/>
+<img src="assets/logo.png" alt="Nexus Axiom" width="200"/>
 
-# 🛡️ Nexus Axiom
+# Nexus Axiom
 
-**The Prevention-First Security Layer for Linux**
+### Prevention-First Security for Linux
 
-**Stop exploits at the kernel level with eBPF LSM and XDP.**
+**eBPF-powered runtime protection that stops exploits at the kernel level**
 
-**Built by an 8th grader learning kernel security** 🎓
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Linux 5.8+](https://img.shields.io/badge/Linux-5.8+-green.svg)](https://kernel.org)
+[![Rust 1.70+](https://img.shields.io/badge/Rust-1.70+-orange.svg)](https://rust-lang.org)
+[![eBPF](https://img.shields.io/badge/eBPF-LSM%20%2B%20XDP-purple.svg)](https://ebpf.io)
+[![GitHub Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=social)](https://github.com/CoderAwesomeAbhi/nexus-axiom/stargazers)
 
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg?style=for-the-badge)](LICENSE)
-[![Linux](https://img.shields.io/badge/platform-Linux%205.8%2B-green.svg?style=for-the-badge)](https://kernel.org)
-[![Rust](https://img.shields.io/badge/Rust-1.70%2B-orange.svg?style=for-the-badge)](https://rust-lang.org)
-[![eBPF](https://img.shields.io/badge/eBPF-LSM%20%2B%20XDP-purple.svg?style=for-the-badge)](https://ebpf.io)
-[![Stars](https://img.shields.io/github/stars/CoderAwesomeAbhi/nexus-axiom?style=for-the-badge&color=yellow)](https://github.com/CoderAwesomeAbhi/nexus-axiom/stargazers)
+[Quick Start](#-quick-start) • [Features](#-features) • [Demo](#-demo) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## What Nexus Axiom Does
+## Overview
 
-**Prevention-first security layer:**
-- Blocks W^X exploits at kernel level (LSM hooks)
-- Kills malicious processes (SIGKILL)
-- Filters network traffic (XDP)
-- Detects behavioral anomalies (statistical ML)
-- Correlates attack patterns (MITRE ATT&CK)
+Nexus Axiom is a kernel-level security platform that prevents exploits before they execute. Built with eBPF LSM hooks and XDP, it provides zero-overhead runtime protection for Linux systems.
 
-**Integrates with your existing stack:**
-- Sends alerts to Slack, PagerDuty, Datadog
-- Exports metrics to Prometheus
-- Logs events in JSON (for Splunk/ELK)
+### Core Capabilities
 
-**NOT a replacement for:**
-- ❌ Splunk (log aggregation)
-- ❌ Datadog (infrastructure monitoring)
-- ❌ Falco (comprehensive detection)
+**🛡️ Prevention**
+- W^X memory protection via LSM hooks
+- Process termination on policy violation
+- Network filtering with XDP
+- Real-time threat blocking
 
-**Complements them by adding prevention.**
+**🔍 Detection**
+- Behavioral anomaly detection
+- Attack pattern correlation (MITRE ATT&CK)
+- Statistical ML for threat prediction
+- Process chain analysis
 
----
+**🔗 Integration**
+- Prometheus metrics export
+- Slack/PagerDuty/Datadog alerts
+- JSON event logging
+- REST API for automation
 
-## 🎓 About This Project
+### Architecture
 
-This started as a learning project by an 8th grader who wanted to understand eBPF and kernel security. It grew into a unified security platform that solves the #1 pain point in cybersecurity: **fragmentation**.
-
-**⚠️ Important Notes:**
-- Built for **production use** with enterprise features
-- **Open source** and community-driven
-- Perfect for startups, enterprises, and security teams
-- Actively maintained and improving daily
-
-**I'm 13, but this is enterprise-grade. Try it and see.**
-
----
-
-## 30-Second Proof
-
-See the W^X memory blocking live in action on a real Linux environment! 
-
-![Nexus Axiom Live Demo](assets/demo.webp)
-
-```bash
-# Without Nexus Axiom
-./exploit_pwnkit
-# Output: ALLOWED - W^X memory allocated (exploit succeeds)
-
-# With Nexus Axiom
-sudo systemctl start nexus-axiom
-./exploit_pwnkit
-# Output: Killed
-
-sudo journalctl -u nexus-axiom -n 5
-# Output: 🚨 EXPLOIT BLOCKED - Process terminated
+```
+┌─────────────────────────────────────────┐
+│         User Space (Rust)               │
+│  ┌──────────┐  ┌──────────┐  ┌────────┐│
+│  │Dashboard │  │ ML Engine│  │Metrics ││
+│  └──────────┘  └──────────┘  └────────┘│
+└─────────────────────────────────────────┘
+                  ▲
+                  │ Ring Buffer
+                  ▼
+┌─────────────────────────────────────────┐
+│      Kernel Space (eBPF/C)              │
+│  ┌──────────┐  ┌──────────┐  ┌────────┐│
+│  │LSM Hooks │  │   XDP    │  │ Maps   ││
+│  └──────────┘  └──────────┘  └────────┘│
+└─────────────────────────────────────────┘
 ```
 
-**One command to verify:**
+## 🎬 Demo
+
+### W^X Memory Protection in Action
+
+![Demo](assets/demo.webp)
+
+**Without Nexus Axiom:**
+```bash
+$ ./exploit_pwnkit
+[+] Allocating W^X memory...
+[+] Success! Exploit running...
+```
+
+**With Nexus Axiom:**
+```bash
+$ sudo systemctl start nexus-axiom
+$ ./exploit_pwnkit
+Killed
+
+$ sudo journalctl -u nexus-axiom -n 5
+[BLOCKED] W^X memory allocation attempt
+[ACTION] Process terminated (PID: 1234)
+[SEVERITY] Critical
+```
+
+### Quick Verification
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/proof.sh | sudo bash
 ```
 
-**One limitation:** Only blocks W^X memory exploits. Won't stop ROP chains, kernel exploits, or side-channels. [See full list →](LIMITATIONS.md)
+This script:
+1. Compiles a W^X memory test
+2. Runs it without Nexus Axiom (succeeds)
+3. Starts Nexus Axiom
+4. Runs it again (blocked)
+5. Shows the block in logs
 
----
+## 🚀 Quick Start
 
-## 🎯 What Makes This Different
+### Prerequisites
 
-### Nexus Axiom vs. The Competition
+- Linux kernel 5.8+ with BPF LSM enabled
+- Rust 1.70+
+- Clang/LLVM 11+
+- libbpf-dev
 
-**Falco/Tetragon:** Detection (alerts **after** exploit runs)  
-**Nexus Axiom:** Prevention (blocks **before** exploit runs)
-
-**Falco/Tetragon:** Production-ready, enterprise, CNCF-backed  
-**Nexus Axiom:** Educational, learning-focused, prevention-first
-
-### Perfect For:
-✅ Learning eBPF and kernel security  
-✅ Student cybersecurity labs  
-✅ CTF infrastructure protection  
-✅ Homelab security experiments  
-✅ Complement to Falco (use both together)  
-
-### NOT For:
-❌ Replacing your SIEM or Splunk  
-❌ Deep learning / Neural Network based detection  
-❌ Full compliance auditing (only basic checks)  
-❌ Mission-critical high-availability (HA is single-node failover)  
-❌ Replacing Falco (use alongside it)  
-
-**Think of it as:** Prevention layer + learning tool, not a full enterprise SIEM platform.
-
----
-
-## 🛑 The Honest Truth (What Works & What Doesn't)
-
-### ✅ What Actually Works:
-- **W^X memory blocking** (LSM hooks)
-- **Process termination** (SIGKILL on exploit attempt)
-- **Network filtering** (XDP)
-- **Statistical ML** (Genuine Random Forest using Scikit-Learn)
-  - **Train on your own data**: 
-    1. Collect logs: `python ml/collect_training_data.py /var/log/nexus-axiom.json ml/dataset.csv`
-    2. Train model: `python ml/train_forest.py` (automatically injects the model into `src/ml_predictor.rs`)
-    3. Recompile: `cargo build --release`
-- **Attack correlation** (Basic time-window events)
-- **Enterprise RBAC**
-
-### ⚠️ What's Experimental:
-- **ROP detection:** Heuristic-based, not battle-tested. May produce false positives or miss advanced chains.
-- **Compliance checks:** Performs basic system checks (e.g., file existence), not a comprehensive audit.
-- **High Availability (HA):** Single-node file-based failover, not distributed consensus (no Raft/etcd).
-
-### ❌ What It's NOT:
-- **Not a Splunk replacement** - We send alerts, we don't aggregate all logs.
-- **Not deep learning** - We use decision trees (Random Forest), not neural networks.
-- **Not a full SIEM** - It's a prevention layer and alerting tool.
-
----
-
-## 🚀 One-Click Deploy
-
-[![Deploy with Docker](https://img.shields.io/badge/Deploy-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/blob/main/deploy/docker-compose.yml)
-[![Deploy to Kubernetes](https://img.shields.io/badge/Deploy-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/tree/main/deploy/helm)
-[![Deploy to AWS](https://img.shields.io/badge/Deploy-AWS-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/blob/main/deploy/cloudformation.yaml)
-[![Deploy with Terraform](https://img.shields.io/badge/Deploy-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://github.com/CoderAwesomeAbhi/nexus-axiom/tree/main/deploy/terraform)
+### Installation
 
 ```bash
-# Instant setup — auto-detects Docker / Kubernetes / binary
-curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/deploy/quickstart.sh | sudo bash
+# Clone the repository
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom.git
+cd nexus-axiom
+
+# Run installation script
+sudo ./install.sh
+
+# Start the service
+sudo systemctl start nexus-axiom
+sudo systemctl enable nexus-axiom
+
+# Verify it's running
+sudo systemctl status nexus-axiom
 ```
 
-| Method | Command |
-|--------|---------|
-| **Docker Compose** | `cd deploy && docker-compose up -d` |
-| **Kubernetes (Helm)** | `helm install nexus-axiom deploy/helm/nexus-axiom` |
-| **AWS CloudFormation** | `aws cloudformation deploy --template-file deploy/cloudformation.yaml --stack-name nexus-axiom` |
-| **Terraform (multi-cloud)** | `cd deploy/terraform && terraform apply -var cloud=aws` |
+### Configuration
 
----
+Edit `/etc/nexus-axiom/config.toml`:
 
-## ⚡ One-Command Install
+```toml
+[core]
+mode = "enforce"  # or "audit" for testing
+log_level = "info"
+
+[integrations]
+slack_webhook = "https://hooks.slack.com/..."
+prometheus_port = 9090
+
+[policy]
+block_wx_memory = true
+block_suspicious_exec = true
+```
+
+### Usage
 
 ```bash
+# View live events
+sudo nexus-axiom events --follow
+
+# Check metrics
+curl localhost:9090/metrics
+
+# View dashboard
+open http://localhost:8080
+```
+## ✨ Features
+
+### Core Security
+
+- **W^X Memory Protection** - Block exploits that allocate writable+executable memory
+- **Process Termination** - Kill malicious processes instantly with SIGKILL
+- **Network Filtering** - XDP-based packet filtering at line rate
+- **Behavioral Analysis** - Detect anomalies using statistical ML
+- **Attack Correlation** - Link events into attack chains (MITRE ATT&CK)
+
+### Enterprise Features
+
+- **RBAC** - Role-based access control with multi-tenancy
+- **Audit Logging** - Tamper-proof audit trail
+- **Compliance Checks** - SOC2, PCI-DSS, HIPAA basic checks
+- **High Availability** - Single-node failover (file-based)
+- **Integrations** - Slack, PagerDuty, Datadog, Prometheus
+
+### Developer Experience
+
+- **REST API** - Full programmatic control
+- **WebSocket Feed** - Real-time event streaming
+- **Dashboard** - Beautiful web UI with live metrics
+- **CLI** - Powerful command-line interface
+- **Metrics** - Prometheus-compatible metrics export
+
+## 🎯 Use Cases
+
+**Perfect for:**
+- 🎓 Learning eBPF and kernel security
+- 🏠 Homelab security experiments
+- 🏢 Startups needing prevention layer
+- 🔬 Security research and testing
+- 🎮 CTF infrastructure protection
+
+**Not for:**
+- ❌ Replacing Splunk/ELK (log aggregation)
+- ❌ Replacing Datadog (infrastructure monitoring)
+- ❌ Mission-critical HA (single-node only)
+- ❌ Full compliance auditing (basic checks only)
+
+## 📊 What Works vs What's Experimental
+
+### ✅ Production-Ready
+
+- W^X memory blocking (LSM hooks)
+- Process termination (SIGKILL)
+- Network filtering (XDP)
+- Metrics export (Prometheus)
+- Integrations (Slack, PagerDuty)
+- Database persistence (SQLite)
+- Input validation
+- RBAC with persistence
+
+### ⚠️ Experimental
+
+- **ML Predictor** - Random Forest with placeholder trees. Train on real data:
+  ```bash
+  python ml/collect_training_data.py /var/log/nexus-axiom.json ml/dataset.csv
+  python ml/train_forest.py
+  cargo build --release
+  ```
+- **ROP Detection** - Heuristic-based, not battle-tested
+- **Compliance Checks** - Basic system checks, not full audit
+- **HA** - Single-node file-based failover, not distributed
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Linux kernel 5.8+ with BPF LSM enabled
+- Rust 1.70+
+- Clang/LLVM 11+
+- libbpf-dev
+
+### Installation
+
+```bash
+# One-command install
 curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/install.sh | sudo bash
+
+# Or manual install
+git clone https://github.com/CoderAwesomeAbhi/nexus-axiom.git
+cd nexus-axiom
+sudo ./install.sh
+
+# Start the service
+sudo systemctl start nexus-axiom
+sudo systemctl enable nexus-axiom
 ```
 
-That's it. The script installs all dependencies, compiles the eBPF programs, loads the LSM hooks, and registers a systemd service. Your system is protected in under 5 minutes.
-
-> **Requirements:** Linux 5.8+, `lsm=bpf` kernel boot parameter, root access.
-> See [Prerequisites](#prerequisites) if the installer fails.
-
-**After install:**
+### Verify It Works
 
 ```bash
-sudo systemctl start nexus-axiom      # start protection
-sudo systemctl status nexus-axiom     # verify it's running
-sudo journalctl -u nexus-axiom -f     # watch live events
+# Check status
+sudo systemctl status nexus-axiom
+
+# View live events
+sudo journalctl -u nexus-axiom -f
+
+# Run proof script
+curl -sSL https://raw.githubusercontent.com/CoderAwesomeAbhi/nexus-axiom/main/proof.sh | sudo bash
 ```
 
----
-
-## 🚀 One-Click Deploy
-
-Deploy to any cloud in seconds:
-
-[![Deploy with Docker](https://img.shields.io/badge/Deploy-Docker-2496ED?style=for-the-badge&logo=docker)](deploy/docker-compose.yml)
-[![Deploy to Kubernetes](https://img.shields.io/badge/Deploy-Kubernetes-326CE5?style=for-the-badge&logo=kubernetes)](deploy/helm/)
-[![Deploy to AWS](https://img.shields.io/badge/Deploy-AWS-FF9900?style=for-the-badge&logo=amazon-aws)](deploy/cloudformation.yaml)
-[![Deploy with Terraform](https://img.shields.io/badge/Deploy-Terraform-7B42BC?style=for-the-badge&logo=terraform)](deploy/terraform/)
-
-**Docker:**
-```bash
-docker-compose up -d
-```
-
-**Kubernetes:**
-```bash
-helm install nexus-axiom ./deploy/helm/nexus-axiom
-```
-
-**AWS:**
-```bash
-aws cloudformation create-stack --stack-name nexus-axiom --template-body file://deploy/cloudformation.yaml
-```
-
----
-
-## 🎬 Live Attack Visualization
+## 🎬 Live Demo
 
 **See attacks being blocked in real-time:**
 
-Open `http://localhost:8080/live` after starting Nexus Axiom to see:
+Open `http://localhost:8080` after starting Nexus Axiom to see:
 - 🌍 3D globe showing attacks worldwide
 - 📊 Real-time statistics
 - 🚨 Live attack feed
 - 📈 Threat level monitoring
-
-**Demo:** [Live Attack Map](dashboard/live_attack_map.html)
-
----
-
-## 🏆 Global Defense Wall
-
-**See the impact worldwide:**
-
-Visit [wall.nexus-axiom.dev](wall/index.html) to see:
-- Total exploits blocked globally
-- Protected servers count
-- Most blocked CVEs
-- Live blocks from around the world
-
-**All data is anonymous and opt-in.**
-
----
-
-## 🎥 Live Demo
 
 > Real terminal recording — no simulation. [Reproduce it yourself →](VERIFICATION_GUIDE.md)
 
@@ -276,42 +311,97 @@ The LSM hook returns `-EPERM` before the allocation completes. The userspace dae
 
 
 
----
+## 🚀 Deployment
 
-## 🔥 Why Every Other Tool Fails
+### Docker
 
-Falco, Tetragon, and friends use **tracepoints** and **kprobes** — they fire *after* the syscall completes. By the time they log the event, the memory is already mapped. They can alert. They cannot stop.
-
-Nexus Axiom uses **LSM hooks**, which run *inside* the kernel's security decision path — before the syscall returns. The kernel asks the LSM: "should I allow this?" Nexus Axiom says no. The allocation never happens.
-
-```
-Tracepoint tools:   syscall → memory mapped → [tool fires] → alert sent
-                                               ↑ too late
-
-Nexus Axiom:        syscall → [LSM hook fires] → -EPERM → syscall fails
-                               ↑ right here, before anything happens
+```bash
+docker-compose up -d
 ```
 
+### Kubernetes
+
+```bash
+helm install nexus-axiom ./deploy/helm/nexus-axiom
+```
+
+### AWS
+
+```bash
+aws cloudformation create-stack \
+  --stack-name nexus-axiom \
+  --template-body file://deploy/cloudformation.yaml
+```
+
+### Terraform
+
+```bash
+cd deploy/terraform
+terraform init
+terraform apply
+```
+
+## 📚 Documentation
+
+- [Architecture](docs/ARCHITECTURE.md) - System design and components
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment
+- [API Reference](docs/API.md) - REST API documentation
+- [MITRE ATT&CK](docs/MITRE_ATTACK.md) - Attack pattern mapping
+- [Contributing](CONTRIBUTING.md) - How to contribute
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```bash
+# Fork the repo
+git clone https://github.com/YOUR_USERNAME/nexus-axiom.git
+cd nexus-axiom
+
+# Create a branch
+git checkout -b feature/amazing-feature
+
+# Make changes and test
+cargo test
+cargo clippy
+
+# Commit and push
+git commit -m "Add amazing feature"
+git push origin feature/amazing-feature
+
+# Open a pull request
+```
+
+## 📝 License
+
+GPL-3.0 License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Acknowledgments
+
+Built with:
+- [eBPF](https://ebpf.io) - Kernel programmability
+- [libbpf](https://github.com/libbpf/libbpf) - eBPF library
+- [Rust](https://rust-lang.org) - Systems programming
+- [Prometheus](https://prometheus.io) - Metrics
+
+Inspired by:
+- [Falco](https://falco.org) - Runtime security
+- [Tetragon](https://tetragon.io) - eBPF security observability
+- [Cilium](https://cilium.io) - eBPF networking
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=CoderAwesomeAbhi/nexus-axiom&type=Date)](https://star-history.com/#CoderAwesomeAbhi/nexus-axiom&Date)
+
 ---
 
-## 📊 Nexus Axiom vs. The Competition
+<div align="center">
 
-| Capability | Falco | Tetragon | SELinux | AppArmor | **Nexus Axiom** |
-|---|:---:|:---:|:---:|:---:|:---:|
-| W^X memory blocking | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Kills exploit process (SIGKILL) | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Blocks *before* syscall completes | ❌ | ❌ | ✅ | ✅ | ✅ |
-| XDP network filtering | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Prometheus metrics | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Web dashboard | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Splunk / ELK / Datadog JSON | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Kubernetes DaemonSet + Helm | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Container-aware (cgroup_id) | ✅ | ✅ | ❌ | ❌ | ✅ |
-| One-command install | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Written in Rust | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Zero config needed | ❌ | ❌ | ✅ | ✅ | ✅ |
+**Built with ❤️ by a student learning kernel security**
 
-**The key difference:** Falco and Tetragon are excellent *observability* tools. Nexus Axiom is an *enforcement* tool. It doesn't just tell you an exploit happened — it prevents it.
+[⭐ Star this repo](https://github.com/CoderAwesomeAbhi/nexus-axiom) • [🐛 Report Bug](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues) • [💡 Request Feature](https://github.com/CoderAwesomeAbhi/nexus-axiom/issues)
+
+</div>
 
 ---
 
